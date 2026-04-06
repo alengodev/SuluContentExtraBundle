@@ -1,6 +1,8 @@
 {
     "name": "alengo/sulu-content-extra-bundle",
     "description": "Additional Data tab for Sulu CMS Pages and Articles — generic JSON field with configurable key mapping",
+    "type": "symfony-bundle",
+    "homepage": "https://github.com/alengodev/SuluContentExtraBundle",
     "license": "MIT",
     "authors": [
         {
