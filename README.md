@@ -1,8 +1,6 @@
 # SuluContentExtraBundle
 
-Adds a configurable **Additional Data** tab to [Sulu CMS](https://sulu.io/) 3.x Pages and Articles. Custom fields are stored as a JSON column on the dimension content entity — no extra tables, no extra API routes.
-
-Also ships Doctrine ORM 3.x compatibility fixes required when extending Sulu's `Page` and `Article` mapped-superclass entities.
+Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable additional data, navigation link markers, and Doctrine ORM 3.x compatibility fixes for mapped-superclass entities.
 
 ## Features
 
@@ -10,6 +8,7 @@ Also ships Doctrine ORM 3.x compatibility fixes required when extending Sulu's `
 - **Built-in entities** — concrete `Page`, `PageDimensionContent`, `Article`, `ArticleDimensionContent` extending Sulu's base classes; no project entities required
 - **Configurable field mapping** — declare which form fields go to the unlocalized vs. localized dimension content via bundle config
 - **Zero-config entity registration** — `sulu_page` / `sulu_article` objects are auto-configured via `PrependExtensionInterface`
+- **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
 - **Doctrine compatibility** — `SuluPageAwareTreeListener`, `SafeTreeObjectHydrator`, `InheritedAssociationDeclaredFixerSubscriber` included; no separate bundle needed
 
 ## Requirements
@@ -129,6 +128,19 @@ Example form:
 | `Entity\Article` | Concrete Doctrine entity (`ar_articles`) extending Sulu's `Article` |
 | `Entity\ArticleDimensionContent` | Dimension content with `additionalData` JSON column (`ar_article_dimension_contents`) |
 | `Model\AdditionalDataInterface` | Interface implemented by both dimension content entities |
+
+## Navigation Link Markers
+
+`NavigationLinkEnhancer` decorates Sulu's `sulu_page.page_link_dimension_content_enhancer`. When a page is of link type, it adds two markers to the template data:
+
+| Field | Type | Description |
+|---|---|---|
+| `sourceLink` | `bool` | `true` when the page redirects to another page or URL |
+| `sourceUuid` | `string` | UUID of the original link-type page |
+
+`NavigationLinkTypeResolver` exposes these fields to templates via the `navlink` content section — bypassing Sulu's `TemplateResolver` which would otherwise drop unknown keys.
+
+Both services are registered automatically.
 
 ## Doctrine Compatibility
 
