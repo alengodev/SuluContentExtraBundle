@@ -11,10 +11,12 @@ use Alengo\SuluContentExtraBundle\Content\Merger\AdditionalDataMerger;
 use Alengo\SuluContentExtraBundle\Content\Normalizer\AdditionalDataNormalizer;
 use Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver;
 use Alengo\SuluContentExtraBundle\Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber;
+use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 
 class AlengoContentExtraExtension extends Extension implements PrependExtensionInterface
@@ -67,6 +69,9 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
 
     public function load(array $configs, ContainerBuilder $container): void
     {
+        $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__) . '/Resources/config'));
+        $loader->load('services.yaml');
+
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 

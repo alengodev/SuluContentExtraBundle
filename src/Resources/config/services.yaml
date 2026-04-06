@@ -1,0 +1,9 @@
+services:
+    Alengo\SuluContentExtraBundle\Content\Enhancer\NavigationLinkEnhancer:
+        decorates: sulu_page.page_link_dimension_content_enhancer
+        arguments:
+            $inner: '@.inner'
+
+    Alengo\SuluContentExtraBundle\Content\Resolver\NavigationLinkTypeResolver:
+        tags:
+            - { name: 'sulu_content.content_resolver', type: 'navlink' }
