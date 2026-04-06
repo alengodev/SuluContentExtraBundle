@@ -1,8 +1,9 @@
 services:
-    Alengo\SuluContentExtraBundle\Content\Enhancer\NavigationLinkEnhancer:
-        decorates: sulu_page.page_link_dimension_content_enhancer
-        arguments:
-            $inner: '@.inner'
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    Alengo\SuluContentExtraBundle\Content\Enhancer\NavigationLinkEnhancer: ~
 
     Alengo\SuluContentExtraBundle\Content\Resolver\NavigationLinkTypeResolver:
         tags:
