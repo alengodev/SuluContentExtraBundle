@@ -10,6 +10,7 @@ use Alengo\SuluContentExtraBundle\Content\DataMapper\AdditionalDataMapper;
 use Alengo\SuluContentExtraBundle\Content\Merger\AdditionalDataMerger;
 use Alengo\SuluContentExtraBundle\Content\Normalizer\AdditionalDataNormalizer;
 use Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver;
+use Alengo\SuluContentExtraBundle\Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -54,12 +55,6 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
             ]);
         }
 
-        if ($container->hasExtension('alengo_doctrine_compatibility')) {
-            $container->prependExtensionConfig('alengo_doctrine_compatibility', [
-                'page_entity_class' => $pageClass,
-            ]);
-        }
-
         if ($articleEnabled && $container->hasExtension('sulu_article')) {
             $container->prependExtensionConfig('sulu_article', [
                 'objects' => [
@@ -74,6 +69,14 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
+
+        // Parameter for OverrideTreeListenerPass
+        $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
+
+        // Doctrine: fix inherited association mappings for Page/Article extension
+        $subscriberDef = new Definition(InheritedAssociationDeclaredFixerSubscriber::class);
+        $subscriberDef->addTag('doctrine.event_listener', ['event' => 'loadClassMetadata']);
+        $container->setDefinition(InheritedAssociationDeclaredFixerSubscriber::class, $subscriberDef);
 
         // Merger
         $mergerDef = new Definition(AdditionalDataMerger::class);

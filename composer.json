@@ -9,7 +9,6 @@
     ],
     "require": {
         "php": "^8.2",
-        "alengo/doctrine-compatibility-bundle": "^1.0",
         "sulu/sulu": "~3.0"
     },
     "autoload": {
