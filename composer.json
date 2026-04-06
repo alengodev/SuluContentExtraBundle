@@ -11,9 +11,6 @@
         "php": "^8.2",
         "sulu/sulu": "~3.0"
     },
-    "require-dev": {
-        "alengo/doctrine-compatibility-bundle": "^1.0"
-    },
     "suggest": {
         "alengo/doctrine-compatibility-bundle": "Required when using Doctrine tree listener with Sulu pages"
     },
