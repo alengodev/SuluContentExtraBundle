@@ -24,8 +24,17 @@ class InheritedAssociationDeclaredFixerSubscriber
         }
     }
 
-    private function fixAssociationDeclared(string $className, iterable $associationMappings): void
+    /**
+     * @param array<string, \Doctrine\ORM\Mapping\AssociationMapping> $associationMappings
+     */
+    private function fixAssociationDeclared(string $className, array $associationMappings): void
     {
+        // Skip reflection entirely if all mappings already have 'declared' set
+        $unresolved = \array_filter($associationMappings, static fn ($m) => null === $m->declared);
+        if ([] === $unresolved) {
+            return;
+        }
+
         $rc = new \ReflectionClass($className);
 
         /** @var array<string, \ReflectionClass<object>> $parentReflections */
@@ -34,11 +43,7 @@ class InheritedAssociationDeclaredFixerSubscriber
             $parentReflections[$parentClass] = new \ReflectionClass($parentClass);
         }
 
-        foreach ($associationMappings as $fieldName => $mapping) {
-            if (null !== $mapping->declared) {
-                continue;
-            }
-
+        foreach ($unresolved as $fieldName => $mapping) {
             if ($rc->hasProperty($fieldName)) {
                 $mapping->declared = $rc->getProperty($fieldName)->getDeclaringClass()->getName();
                 continue;

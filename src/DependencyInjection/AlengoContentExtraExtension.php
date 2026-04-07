@@ -24,7 +24,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
             $container->getExtensionConfig($this->getAlias()),
         );
 
-        if ($container->hasExtension('sulu_page')) {
+        if ($config['page']['enabled'] && $container->hasExtension('sulu_page')) {
             $container->prependExtensionConfig('sulu_page', [
                 'objects' => [
                     'page' => ['model' => $config['page']['page_class']],
@@ -46,15 +46,18 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         // association mappings with the configured concrete classes. This ensures Doctrine never
         // generates proxies for the original Sulu classes, allowing auto_generate_proxy_classes: false.
         if ($container->hasExtension('doctrine')) {
-            $resolveTargetEntities = [
-                \Sulu\Page\Domain\Model\PageDimensionContent::class => $config['page']['entity_class'],
-            ];
+            $resolveTargetEntities = [];
+            if ($config['page']['enabled']) {
+                $resolveTargetEntities[\Sulu\Page\Domain\Model\PageDimensionContent::class] = $config['page']['entity_class'];
+            }
             if ($config['article']['enabled'] && $container->hasExtension('sulu_article')) {
                 $resolveTargetEntities[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $config['article']['entity_class'];
             }
-            $container->prependExtensionConfig('doctrine', [
-                'orm' => ['resolve_target_entities' => $resolveTargetEntities],
-            ]);
+            if ([] !== $resolveTargetEntities) {
+                $container->prependExtensionConfig('doctrine', [
+                    'orm' => ['resolve_target_entities' => $resolveTargetEntities],
+                ]);
+            }
         }
     }
 
@@ -63,47 +66,63 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__) . '/Resources/config'));
         $loader->load('services.yaml');
 
-        $configuration = new Configuration();
-        $config = $this->processConfiguration($configuration, $configs);
+        $config = $this->processConfiguration(new Configuration(), $configs);
 
-        // Parameter for OverrideTreeListenerPass
-        $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
-
-        // Page DataMapper
-        $pageMapperDef = new Definition(AdditionalDataMapper::class);
-        $pageMapperDef->addArgument($config['page']['entity_class']);
-        $pageMapperDef->addArgument($config['page']['unlocalized_keys']);
-        $pageMapperDef->addArgument($config['page']['localized_keys']);
-        $pageMapperDef->addTag('sulu_content.data_mapper', ['priority' => 64]);
-        $container->setDefinition('alengo_content_extra.page_data_mapper', $pageMapperDef);
-
-        // Page Admin tab
-        $pageAdminDef = new Definition(PageAdditionalAdmin::class);
-        $pageAdminDef->addArgument(new Reference('sulu_admin.view_builder_factory'));
-        $pageAdminDef->addArgument($config['page']['form_key']);
-        $pageAdminDef->addArgument($config['page']['tab_title']);
-        $pageAdminDef->addTag('sulu.admin');
-        $pageAdminDef->addTag('sulu.context', ['context' => 'admin']);
-        $container->setDefinition(PageAdditionalAdmin::class, $pageAdminDef);
-
-        // Article (optional)
-        if ($config['article']['enabled']) {
-            $articleMapperDef = new Definition(AdditionalDataMapper::class);
-            $articleMapperDef->addArgument($config['article']['entity_class']);
-            $articleMapperDef->addArgument($config['article']['unlocalized_keys']);
-            $articleMapperDef->addArgument($config['article']['localized_keys']);
-            $articleMapperDef->addTag('sulu_content.data_mapper', ['priority' => 64]);
-            $container->setDefinition('alengo_content_extra.article_data_mapper', $articleMapperDef);
-
-            $articleAdminDef = new Definition(ArticleAdditionalAdmin::class);
-            $articleAdminDef->addArgument(new Reference('sulu_admin.view_builder_factory'));
-            $articleAdminDef->addArgument(new Reference('sulu_admin.metadata_group_provider'));
-            $articleAdminDef->addArgument($config['article']['form_key']);
-            $articleAdminDef->addArgument($config['article']['tab_title']);
-            $articleAdminDef->addTag('sulu.admin');
-            $articleAdminDef->addTag('sulu.context', ['context' => 'admin']);
-            $container->setDefinition(ArticleAdditionalAdmin::class, $articleAdminDef);
+        if ($config['page']['enabled']) {
+            $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
+            $container->setDefinition('alengo_content_extra.page_data_mapper', $this->createDataMapperDefinition(
+                $config['page']['entity_class'],
+                $config['page']['unlocalized_keys'],
+                $config['page']['localized_keys'],
+            ));
+            $container->setDefinition(PageAdditionalAdmin::class, $this->createAdminDefinition(
+                PageAdditionalAdmin::class,
+                $config['page']['form_key'],
+                $config['page']['tab_title'],
+            ));
         }
+
+        if ($config['article']['enabled']) {
+            $container->setDefinition('alengo_content_extra.article_data_mapper', $this->createDataMapperDefinition(
+                $config['article']['entity_class'],
+                $config['article']['unlocalized_keys'],
+                $config['article']['localized_keys'],
+            ));
+            $container->setDefinition(ArticleAdditionalAdmin::class, $this->createAdminDefinition(
+                ArticleAdditionalAdmin::class,
+                $config['article']['form_key'],
+                $config['article']['tab_title'],
+                new Reference('sulu_admin.metadata_group_provider'),
+            ));
+        }
+    }
+
+    /**
+     * @param array<int, string> $unlocalizedKeys
+     * @param array<int, string> $localizedKeys
+     */
+    private function createDataMapperDefinition(string $entityClass, array $unlocalizedKeys, array $localizedKeys): Definition
+    {
+        return (new Definition(AdditionalDataMapper::class))
+            ->addArgument($entityClass)
+            ->addArgument($unlocalizedKeys)
+            ->addArgument($localizedKeys)
+            ->addTag('sulu_content.data_mapper', ['priority' => 64]);
+    }
+
+    private function createAdminDefinition(string $class, string $formKey, string $tabTitle, Reference ...$extraArgs): Definition
+    {
+        $def = (new Definition($class))
+            ->addArgument(new Reference('sulu_admin.view_builder_factory'));
+        foreach ($extraArgs as $ref) {
+            $def->addArgument($ref);
+        }
+
+        return $def
+            ->addArgument($formKey)
+            ->addArgument($tabTitle)
+            ->addTag('sulu.admin')
+            ->addTag('sulu.context', ['context' => 'admin']);
     }
 
     public function getAlias(): string

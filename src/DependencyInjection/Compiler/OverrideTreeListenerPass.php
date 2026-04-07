@@ -28,6 +28,10 @@ class OverrideTreeListenerPass implements CompilerPassInterface
             return;
         }
 
+        if (!$container->hasParameter('alengo_content_extra.page_entity_class')) {
+            return;
+        }
+
         $pageEntityClass = $container->getParameter('alengo_content_extra.page_entity_class');
 
         $container->getDefinition('stof_doctrine_extensions.listener.tree')

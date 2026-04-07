@@ -52,6 +52,14 @@ alengo_content_extra:
             - notes
 ```
 
+To use additional data only for Articles (not Pages):
+
+```yaml
+alengo_content_extra:
+    page:
+        enabled: false
+```
+
 To disable the Article tab entirely:
 
 ```yaml
@@ -65,6 +73,7 @@ alengo_content_extra:
 ```yaml
 alengo_content_extra:
     page:
+        enabled: true
         page_class: Alengo\SuluContentExtraBundle\Entity\Page           # override with custom entity
         entity_class: Alengo\SuluContentExtraBundle\Entity\PageDimensionContent
         form_key: page_additional_data
@@ -153,3 +162,20 @@ The bundle ships fixes for Doctrine ORM 3.x + Gedmo tree extension when extendin
 | `Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber` | Fixes null `declared` on inherited association mappings |
 
 These are registered automatically — no separate bundle or configuration needed.
+
+### `auto_generate_proxy_classes: false` in production
+
+The bundle registers Doctrine's `resolve_target_entities` for all enabled entity overrides. This replaces Sulu's original class references in association mappings at container build time, so Doctrine never needs to generate proxies for the original Sulu classes at runtime.
+
+This allows setting `auto_generate_proxy_classes: false` in production (recommended):
+
+```yaml
+# config/packages/prod/doctrine.yaml
+when@prod:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: false
+            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
+```
+
+Proxies are generated during `cache:warmup` as part of the normal deploy process.
