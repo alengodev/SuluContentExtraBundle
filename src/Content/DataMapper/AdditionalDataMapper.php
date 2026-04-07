@@ -31,6 +31,22 @@ final class AdditionalDataMapper implements DataMapperInterface
             return;
         }
 
+        // In preview mode both dimension contents are the same merged object.
+        // Calling setAdditionalData() twice would overwrite the first set of keys,
+        // so merge all configured keys in a single call.
+        if ($unlocalizedDimensionContent === $localizedDimensionContent) {
+            if ($unlocalizedDimensionContent instanceof AdditionalDataInterface) {
+                $unlocalizedDimensionContent->setAdditionalData(
+                    \array_merge(
+                        $this->filterKeys($data, $this->unlocalizedKeys),
+                        $this->filterKeys($data, $this->localizedKeys),
+                    ),
+                );
+            }
+
+            return;
+        }
+
         if ($unlocalizedDimensionContent instanceof AdditionalDataInterface) {
             $unlocalizedDimensionContent->setAdditionalData(
                 $this->filterKeys($data, $this->unlocalizedKeys),
