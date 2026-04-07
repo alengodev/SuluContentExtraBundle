@@ -78,8 +78,18 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         // Parameter for OverrideTreeListenerPass
         $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
 
-        // Doctrine: fix inherited association mappings for Page/Article extension
+        // Doctrine: fix inherited association mappings and targetEntity overrides for Page/Article extension.
+        // The targetEntityOverrides map ensures Doctrine replaces references to Sulu's original entity
+        // classes with the configured concrete classes, so no proxies are needed for the originals.
+        // This allows auto_generate_proxy_classes: false in production.
+        $targetEntityOverrides = [
+            \Sulu\Page\Domain\Model\PageDimensionContent::class => $config['page']['entity_class'],
+        ];
+        if ($config['article']['enabled']) {
+            $targetEntityOverrides[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $config['article']['entity_class'];
+        }
         $subscriberDef = new Definition(InheritedAssociationDeclaredFixerSubscriber::class);
+        $subscriberDef->addArgument($targetEntityOverrides);
         $subscriberDef->addTag('doctrine.event_listener', ['event' => 'loadClassMetadata']);
         $container->setDefinition(InheritedAssociationDeclaredFixerSubscriber::class, $subscriberDef);
 
