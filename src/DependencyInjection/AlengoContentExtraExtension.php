@@ -65,6 +65,21 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 ],
             ]);
         }
+
+        // Doctrine ResolveTargetEntity: replace Sulu's original entity class references in
+        // association mappings with the configured concrete classes. This ensures Doctrine never
+        // generates proxies for the original Sulu classes, allowing auto_generate_proxy_classes: false.
+        if ($container->hasExtension('doctrine')) {
+            $resolveTargetEntities = [
+                \Sulu\Page\Domain\Model\PageDimensionContent::class => $pageContentClass,
+            ];
+            if ($articleEnabled) {
+                $resolveTargetEntities[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $articleContentClass;
+            }
+            $container->prependExtensionConfig('doctrine', [
+                'orm' => ['resolve_target_entities' => $resolveTargetEntities],
+            ]);
+        }
     }
 
     public function load(array $configs, ContainerBuilder $container): void
@@ -78,18 +93,8 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         // Parameter for OverrideTreeListenerPass
         $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
 
-        // Doctrine: fix inherited association mappings and targetEntity overrides for Page/Article extension.
-        // The targetEntityOverrides map ensures Doctrine replaces references to Sulu's original entity
-        // classes with the configured concrete classes, so no proxies are needed for the originals.
-        // This allows auto_generate_proxy_classes: false in production.
-        $targetEntityOverrides = [
-            \Sulu\Page\Domain\Model\PageDimensionContent::class => $config['page']['entity_class'],
-        ];
-        if ($config['article']['enabled']) {
-            $targetEntityOverrides[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $config['article']['entity_class'];
-        }
+        // Doctrine: fix inherited association mappings for Page/Article extension
         $subscriberDef = new Definition(InheritedAssociationDeclaredFixerSubscriber::class);
-        $subscriberDef->addArgument($targetEntityOverrides);
         $subscriberDef->addTag('doctrine.event_listener', ['event' => 'loadClassMetadata']);
         $container->setDefinition(InheritedAssociationDeclaredFixerSubscriber::class, $subscriberDef);
 
