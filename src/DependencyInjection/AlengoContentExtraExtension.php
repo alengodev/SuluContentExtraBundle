@@ -7,10 +7,6 @@ namespace Alengo\SuluContentExtraBundle\DependencyInjection;
 use Alengo\SuluContentExtraBundle\Admin\ArticleAdditionalAdmin;
 use Alengo\SuluContentExtraBundle\Admin\PageAdditionalAdmin;
 use Alengo\SuluContentExtraBundle\Content\DataMapper\AdditionalDataMapper;
-use Alengo\SuluContentExtraBundle\Content\Merger\AdditionalDataMerger;
-use Alengo\SuluContentExtraBundle\Content\Normalizer\AdditionalDataNormalizer;
-use Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver;
-use Alengo\SuluContentExtraBundle\Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -23,45 +19,25 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
 {
     public function prepend(ContainerBuilder $container): void
     {
-        $configs = $container->getExtensionConfig($this->getAlias());
-        $pageClass = \Alengo\SuluContentExtraBundle\Entity\Page::class;
-        $pageContentClass = \Alengo\SuluContentExtraBundle\Entity\PageDimensionContent::class;
-        $articleClass = \Alengo\SuluContentExtraBundle\Entity\Article::class;
-        $articleContentClass = \Alengo\SuluContentExtraBundle\Entity\ArticleDimensionContent::class;
-        $articleEnabled = true;
-
-        foreach ($configs as $c) {
-            if (isset($c['page']['page_class'])) {
-                $pageClass = $c['page']['page_class'];
-            }
-            if (isset($c['page']['entity_class'])) {
-                $pageContentClass = $c['page']['entity_class'];
-            }
-            if (isset($c['article']['article_class'])) {
-                $articleClass = $c['article']['article_class'];
-            }
-            if (isset($c['article']['entity_class'])) {
-                $articleContentClass = $c['article']['entity_class'];
-            }
-            if (isset($c['article']['enabled'])) {
-                $articleEnabled = $c['article']['enabled'];
-            }
-        }
+        $config = $this->processConfiguration(
+            new Configuration(),
+            $container->getExtensionConfig($this->getAlias()),
+        );
 
         if ($container->hasExtension('sulu_page')) {
             $container->prependExtensionConfig('sulu_page', [
                 'objects' => [
-                    'page' => ['model' => $pageClass],
-                    'page_content' => ['model' => $pageContentClass],
+                    'page' => ['model' => $config['page']['page_class']],
+                    'page_content' => ['model' => $config['page']['entity_class']],
                 ],
             ]);
         }
 
-        if ($articleEnabled && $container->hasExtension('sulu_article')) {
+        if ($config['article']['enabled'] && $container->hasExtension('sulu_article')) {
             $container->prependExtensionConfig('sulu_article', [
                 'objects' => [
-                    'article' => ['model' => $articleClass],
-                    'article_content' => ['model' => $articleContentClass],
+                    'article' => ['model' => $config['article']['article_class']],
+                    'article_content' => ['model' => $config['article']['entity_class']],
                 ],
             ]);
         }
@@ -71,10 +47,10 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         // generates proxies for the original Sulu classes, allowing auto_generate_proxy_classes: false.
         if ($container->hasExtension('doctrine')) {
             $resolveTargetEntities = [
-                \Sulu\Page\Domain\Model\PageDimensionContent::class => $pageContentClass,
+                \Sulu\Page\Domain\Model\PageDimensionContent::class => $config['page']['entity_class'],
             ];
-            if ($articleEnabled) {
-                $resolveTargetEntities[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $articleContentClass;
+            if ($config['article']['enabled'] && $container->hasExtension('sulu_article')) {
+                $resolveTargetEntities[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $config['article']['entity_class'];
             }
             $container->prependExtensionConfig('doctrine', [
                 'orm' => ['resolve_target_entities' => $resolveTargetEntities],
@@ -92,26 +68,6 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
 
         // Parameter for OverrideTreeListenerPass
         $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
-
-        // Doctrine: fix inherited association mappings for Page/Article extension
-        $subscriberDef = new Definition(InheritedAssociationDeclaredFixerSubscriber::class);
-        $subscriberDef->addTag('doctrine.event_listener', ['event' => 'loadClassMetadata']);
-        $container->setDefinition(InheritedAssociationDeclaredFixerSubscriber::class, $subscriberDef);
-
-        // Merger
-        $mergerDef = new Definition(AdditionalDataMerger::class);
-        $mergerDef->addTag('sulu_content.merger', ['priority' => 20]);
-        $container->setDefinition(AdditionalDataMerger::class, $mergerDef);
-
-        // Normalizer
-        $normalizerDef = new Definition(AdditionalDataNormalizer::class);
-        $normalizerDef->addTag('sulu_content.normalizer', ['priority' => 20]);
-        $container->setDefinition(AdditionalDataNormalizer::class, $normalizerDef);
-
-        // Resolver
-        $resolverDef = new Definition(AdditionalDataResolver::class);
-        $resolverDef->addTag('sulu_content.content_resolver', ['type' => 'additional']);
-        $container->setDefinition(AdditionalDataResolver::class, $resolverDef);
 
         // Page DataMapper
         $pageMapperDef = new Definition(AdditionalDataMapper::class);

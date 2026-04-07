@@ -8,3 +8,19 @@ services:
     Alengo\SuluContentExtraBundle\Content\Resolver\NavigationLinkTypeResolver:
         tags:
             - { name: 'sulu_content.content_resolver', type: 'navlink' }
+
+    Alengo\SuluContentExtraBundle\Content\Merger\AdditionalDataMerger:
+        tags:
+            - { name: 'sulu_content.merger', priority: 20 }
+
+    Alengo\SuluContentExtraBundle\Content\Normalizer\AdditionalDataNormalizer:
+        tags:
+            - { name: 'sulu_content.normalizer', priority: 20 }
+
+    Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver:
+        tags:
+            - { name: 'sulu_content.content_resolver', type: 'additional' }
+
+    Alengo\SuluContentExtraBundle\Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber:
+        tags:
+            - { name: 'doctrine.event_listener', event: 'loadClassMetadata' }
