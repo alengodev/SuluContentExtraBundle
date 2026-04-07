@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Alengo\SuluContentExtraBundle\Admin;
 
-use Sulu\Bundle\AdminBundle\Admin\Admin;
-use Sulu\Bundle\AdminBundle\Admin\View\DropdownToolbarAction;
-use Sulu\Bundle\AdminBundle\Admin\View\ToolbarAction;
 use Sulu\Bundle\AdminBundle\Admin\View\ViewBuilderFactoryInterface;
 use Sulu\Bundle\AdminBundle\Admin\View\ViewCollection;
 use Sulu\Page\Infrastructure\Sulu\Admin\PageAdmin;
 
-class PageAdditionalAdmin extends Admin
+class PageAdditionalAdmin extends AbstractAdditionalAdmin
 {
     public function __construct(
         private readonly ViewBuilderFactoryInterface $viewBuilderFactory,
@@ -26,35 +23,6 @@ class PageAdditionalAdmin extends Admin
             return;
         }
 
-        $saveToolbarAction = new DropdownToolbarAction(
-            'sulu_admin.save',
-            'su-save',
-            [
-                new ToolbarAction(
-                    'sulu_admin.save',
-                    [
-                        'label' => 'sulu_admin.save_draft',
-                        'options' => ['action' => 'draft'],
-                        'visible_condition' => '(!_permissions || _permissions.edit)',
-                    ],
-                ),
-                new ToolbarAction(
-                    'sulu_admin.save',
-                    [
-                        'label' => 'sulu_admin.save_publish',
-                        'options' => ['action' => 'publish'],
-                        'visible_condition' => '(!_permissions || _permissions.edit) && (!_permissions || _permissions.live)',
-                    ],
-                ),
-                new ToolbarAction(
-                    'sulu_admin.publish',
-                    [
-                        'visible_condition' => '(!_permissions || _permissions.live)',
-                    ],
-                ),
-            ],
-        );
-
         $viewCollection->add(
             $this->viewBuilderFactory
                 ->createPreviewFormViewBuilder(PageAdmin::EDIT_FORM_VIEW . '.additional', '/additional')
@@ -62,7 +30,7 @@ class PageAdditionalAdmin extends Admin
                 ->setFormKey($this->formKey)
                 ->setTabTitle($this->tabTitle)
                 ->setTitleVisible(true)
-                ->addToolbarActions([$saveToolbarAction])
+                ->addToolbarActions([self::createSaveToolbarAction()])
                 ->addRouterAttributesToFormRequest(['parentId', 'webspace'])
                 ->disablePreviewWebspaceChooser()
                 ->setPreviewCondition('linkOn == false && shadowOn == false && availableLocales && locale in availableLocales')
