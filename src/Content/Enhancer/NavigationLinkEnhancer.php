@@ -25,13 +25,12 @@ class NavigationLinkEnhancer implements DimensionContentEnhancerInterface
             return $this->inner->enhance($dimensionContent);
         }
 
-        $linkData = $dimensionContent->getLinkData();
-        $originalProvider = $linkData['provider'] ?? null;
+        $hasProvider = isset($dimensionContent->getLinkData()['provider']);
         $sourceUuid = $dimensionContent->getResourceId();
 
         $result = $this->inner->enhance($dimensionContent);
 
-        if (null !== $originalProvider && $result instanceof PageDimensionContentInterface) {
+        if ($hasProvider && $result instanceof PageDimensionContentInterface) {
             $result->setTemplateData([
                 ...$result->getTemplateData(),
                 'sourceLink' => true,

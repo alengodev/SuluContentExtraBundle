@@ -1,6 +1,6 @@
 # SuluContentExtraBundle
 
-Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable additional data, navigation link markers, and Doctrine ORM 3.x compatibility fixes for mapped-superclass entities.
+Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable additional data and navigation link markers.
 
 ## Features
 
@@ -9,12 +9,11 @@ Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable ad
 - **Configurable field mapping** — declare which form fields go to the unlocalized vs. localized dimension content via bundle config
 - **Zero-config entity registration** — `sulu_page` / `sulu_article` objects are auto-configured via `PrependExtensionInterface`
 - **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
-- **Doctrine compatibility** — `SuluPageAwareTreeListener`, `SafeTreeObjectHydrator`, `InheritedAssociationDeclaredFixerSubscriber` included; no separate bundle needed
 
 ## Requirements
 
 - PHP 8.2+
-- Sulu CMS ~3.0
+- Sulu CMS ^3.0.6 (Doctrine/Gedmo compatibility fixes for mapped-superclass entities are bundled with Sulu since 3.0.6 — see [sulu/sulu#8743](https://github.com/sulu/sulu/pull/8743))
 - Symfony 7.x
 
 ## Installation
@@ -151,19 +150,7 @@ Example form:
 
 Both services are registered automatically.
 
-## Doctrine Compatibility
-
-The bundle ships fixes for Doctrine ORM 3.x + Gedmo tree extension when extending Sulu's mapped-superclass entities:
-
-| Class | Purpose |
-|---|---|
-| `Doctrine\Tree\SuluPageAwareTreeListener` | Fixes Gedmo's `TreeListener` for Sulu's mapped-superclass `Page` |
-| `Doctrine\Hydrator\SafeTreeObjectHydrator` | Fixes `TreeObjectHydrator::getChildrenField()` for Doctrine ORM 3.x |
-| `Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber` | Fixes null `declared` on inherited association mappings |
-
-These are registered automatically — no separate bundle or configuration needed.
-
-### `auto_generate_proxy_classes: false` in production
+## `auto_generate_proxy_classes: false` in production
 
 The bundle registers Doctrine's `resolve_target_entities` for all enabled entity overrides. This replaces Sulu's original class references in association mappings at container build time, so Doctrine never needs to generate proxies for the original Sulu classes at runtime.
 

@@ -11,7 +11,7 @@
     ],
     "require": {
         "php": "^8.2",
-        "sulu/sulu": "~3.0"
+        "sulu/sulu": "^3.0.6 || ~3.0.x-dev"
     },
     "autoload": {
         "psr-4": {

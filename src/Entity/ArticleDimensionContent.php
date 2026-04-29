@@ -24,7 +24,7 @@ class ArticleDimensionContent extends SuluArticleDimensionContent implements Add
      */
     public function getAdditionalData(): array
     {
-        return $this->additionalData ?? [];
+        return $this->additionalData;
     }
 
     /**

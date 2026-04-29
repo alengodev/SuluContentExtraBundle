@@ -20,7 +20,3 @@ services:
     Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver:
         tags:
             - { name: 'sulu_content.content_resolver', type: 'additional' }
-
-    Alengo\SuluContentExtraBundle\Doctrine\EventSubscriber\InheritedAssociationDeclaredFixerSubscriber:
-        tags:
-            - { name: 'doctrine.event_listener', event: 'loadClassMetadata' }

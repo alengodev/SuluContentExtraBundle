@@ -69,7 +69,6 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         $config = $this->processConfiguration(new Configuration(), $configs);
 
         if ($config['page']['enabled']) {
-            $container->setParameter('alengo_content_extra.page_entity_class', $config['page']['page_class']);
             $container->setDefinition('alengo_content_extra.page_data_mapper', $this->createDataMapperDefinition(
                 $config['page']['entity_class'],
                 $config['page']['unlocalized_keys'],

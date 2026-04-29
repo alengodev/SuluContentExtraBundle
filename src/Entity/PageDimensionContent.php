@@ -24,7 +24,7 @@ class PageDimensionContent extends SuluPageDimensionContent implements Additiona
      */
     public function getAdditionalData(): array
     {
-        return $this->additionalData ?? [];
+        return $this->additionalData;
     }
 
     /**
