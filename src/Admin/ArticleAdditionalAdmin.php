@@ -22,7 +22,7 @@ class ArticleAdditionalAdmin extends AbstractAdditionalAdmin
 
     public function configureViews(ViewCollection $viewCollection): void
     {
-        foreach ($this->groupProvider->getGroups() as $group) {
+        foreach ($this->groupProvider->getGroups(ArticleInterface::TEMPLATE_TYPE) as $group) {
             $parentView = ArticleAdmin::EDIT_TABS_VIEW . '_' . $group->identifier;
 
             if (!$viewCollection->has($parentView)) {
