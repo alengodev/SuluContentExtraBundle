@@ -20,3 +20,14 @@ services:
     Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver:
         tags:
             - { name: 'sulu_content.content_resolver', type: 'additional' }
+
+    # Sort the form groups returned by `sulu_admin.metadata_group_provider`
+    # by the order in which their translation keys appear under
+    # `sulu_admin.template_group.*` in translations/admin+intl-icu.{locale}.yaml.
+    # Editing that YAML's key order changes the order of the Article admin tabs
+    # and the SmartContent Type dropdown.
+    Alengo\SuluContentExtraBundle\Provider\SortedGroupProvider:
+        decorates: sulu_admin.metadata_group_provider
+        arguments:
+            - '@.inner'
+            - '@translator'

@@ -9,6 +9,7 @@ Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable ad
 - **Configurable field mapping** — declare which form fields go to the unlocalized vs. localized dimension content via bundle config
 - **Zero-config entity registration** — `sulu_page` / `sulu_article` objects are auto-configured via `PrependExtensionInterface`
 - **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
+- **Sortable template groups** — `SortedGroupProvider` decorates `sulu_admin.metadata_group_provider` and orders form groups (Article admin tabs, SmartContent Type filter, ...) by the appearance order of their `sulu_admin.template_group.*` keys in `translations/admin+intl-icu.{locale}.yaml`
 
 ## Requirements
 
