@@ -89,17 +89,20 @@ final class AdditionalDataMapper implements DataMapperInterface
     }
 
     /**
-     * Update the stored additionalData for the given configured keys from the submission.
+     * Produce the additionalData to store for the given configured keys.
      *
-     * Per configured key:
-     *  - absent from $data                → left unchanged (an unrelated save, e.g. the main
-     *                                       content tab, never wipes additionalData, which
-     *                                       would also corrupt the version snapshot);
-     *  - present and visible              → written, including an empty (null) value, so the
-     *                                       full set of a template's active fields is stored
-     *                                       exactly like Sulu persists the seo/excerpt data;
-     *  - present but hidden for the current template → removed, so fields that do not belong
-     *                                       to the submitted template are not persisted.
+     * Whenever the submission carries additionalData — recognised by the always-present
+     * "additionalData" key emitted by {@see \Alengo\SuluContentExtraBundle\Content\Normalizer\AdditionalDataNormalizer}
+     * or by any configured key being present as a flat value — the full set of the template's
+     * *visible* keys is (re)written, so additionalData is always persisted with a complete,
+     * consistent key set, just like Sulu persists the seo/excerpt data. Per visible key the
+     * value is taken from the flat submission (a fresh form edit), falling back to the nested
+     * "additionalData" snapshot, and defaulting to null — so empty values are stored and an
+     * empty version restore clears the field instead of leaving stale data behind.
+     *
+     * Keys hidden for the submitted template are omitted. A persist that carries no
+     * additionalData at all (a foreign write that never went through the normalizer) leaves
+     * the existing data untouched, so it can never be wiped by accident.
      *
      * @param array<string, mixed> $existing
      * @param array<string, mixed> $data
@@ -110,23 +113,51 @@ final class AdditionalDataMapper implements DataMapperInterface
      */
     private function writeKeys(array $existing, array $data, array $keys, array $hiddenKeys): array
     {
-        $additionalData = $existing;
+        if (!$this->carriesAdditionalData($data, $keys)) {
+            return $existing;
+        }
 
+        /** @var array<string, mixed> $snapshot */
+        $snapshot = \is_array($data['additionalData'] ?? null) ? $data['additionalData'] : [];
+
+        $additionalData = [];
         foreach ($keys as $key) {
-            if (!\array_key_exists($key, $data)) {
-                continue;
-            }
-
             if (isset($hiddenKeys[$key])) {
-                unset($additionalData[$key]);
-
                 continue;
             }
 
-            $additionalData[$key] = $data[$key];
+            if (\array_key_exists($key, $data)) {
+                $additionalData[$key] = $data[$key];
+            } elseif (\array_key_exists($key, $snapshot)) {
+                $additionalData[$key] = $snapshot[$key];
+            } else {
+                $additionalData[$key] = null;
+            }
         }
 
         return $additionalData;
+    }
+
+    /**
+     * Whether this submission carries additionalData for the given keys — either the nested
+     * marker emitted by the normalizer, or any of the configured keys present as a flat value.
+     *
+     * @param array<string, mixed> $data
+     * @param array<int, string>   $keys
+     */
+    private function carriesAdditionalData(array $data, array $keys): bool
+    {
+        if (\array_key_exists('additionalData', $data)) {
+            return true;
+        }
+
+        foreach ($keys as $key) {
+            if (\array_key_exists($key, $data)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
