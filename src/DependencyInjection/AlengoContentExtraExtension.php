@@ -86,6 +86,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 $config['page']['entity_class'],
                 $config['page']['unlocalized_keys'],
                 $config['page']['localized_keys'],
+                $config['page']['form_key'],
             ));
             $container->setDefinition(PageAdditionalAdmin::class, $this->createAdminDefinition(
                 PageAdditionalAdmin::class,
@@ -99,6 +100,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 $config['article']['entity_class'],
                 $config['article']['unlocalized_keys'],
                 $config['article']['localized_keys'],
+                $config['article']['form_key'],
             ));
             $container->setDefinition(ArticleAdditionalAdmin::class, $this->createAdminDefinition(
                 ArticleAdditionalAdmin::class,
@@ -113,6 +115,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 $config['snippet']['entity_class'],
                 $config['snippet']['unlocalized_keys'],
                 $config['snippet']['localized_keys'],
+                $config['snippet']['form_key'],
             ));
             $container->setDefinition(SnippetAdditionalAdmin::class, $this->createAdminDefinition(
                 SnippetAdditionalAdmin::class,
@@ -126,12 +129,14 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
      * @param array<int, string> $unlocalizedKeys
      * @param array<int, string> $localizedKeys
      */
-    private function createDataMapperDefinition(string $entityClass, array $unlocalizedKeys, array $localizedKeys): Definition
+    private function createDataMapperDefinition(string $entityClass, array $unlocalizedKeys, array $localizedKeys, string $formKey): Definition
     {
         return (new Definition(AdditionalDataMapper::class))
             ->addArgument($entityClass)
             ->addArgument($unlocalizedKeys)
             ->addArgument($localizedKeys)
+            ->addArgument($formKey)
+            ->addArgument(new Reference('sulu_admin.form_metadata_provider'))
             ->addTag('sulu_content.data_mapper', ['priority' => 64]);
     }
 
