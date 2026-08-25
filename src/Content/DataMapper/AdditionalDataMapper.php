@@ -70,24 +70,20 @@ final class AdditionalDataMapper implements DataMapperInterface
     }
 
     /**
-     * Produce the additionalData to store for the given configured keys.
+     * Write the submitted values for the configured keys over the already stored
+     * additionalData.
      *
-     * The additionalData fields live in their own admin form, separate from the main
-     * content form. Depending on which form is being saved, $data either carries the
-     * additionalData fields or none of them:
+     * Only keys that are actually present in $data are mapped — including when their value
+     * is empty (null), so clearing a field in the additionalData form is stored as an empty
+     * value rather than dropped. Configured keys that are not part of the submission are
+     * left untouched: they are neither added with a null placeholder (so a resource whose
+     * form does not contain a key — e.g. an article without construction_year/location —
+     * never gets that key written) nor removed.
      *
-     *  - When the additionalData form is submitted, at least one configured key is present
-     *    in $data. In that case the *complete* configured key set is written back, using
-     *    the submitted value and defaulting anything omitted to null — so empty fields are
-     *    stored too, exactly like Sulu persists the full "seo"/"excerpt" extension data.
-     *    This keeps every configured key present in the stored JSON instead of silently
-     *    dropping the empty ones.
-     *
-     *  - When none of the configured keys is present, the submission belongs to another
-     *    form (e.g. the main content tab) or to a version restore of content that predates
-     *    the field. The existing additionalData is then preserved unchanged, so an
-     *    unrelated save never wipes it — which would otherwise also corrupt the version
-     *    snapshot taken from the draft.
+     * As a result an unrelated save (the main content tab, which lives in a separate form
+     * and carries none of these keys) or a version restore of content that predates the
+     * field preserves the existing additionalData unchanged, instead of wiping it and
+     * corrupting the version snapshot taken from the draft.
      *
      * @param array<string, mixed> $existing
      * @param array<string, mixed> $data
@@ -101,24 +97,8 @@ final class AdditionalDataMapper implements DataMapperInterface
             return $existing;
         }
 
-        $submitted = false;
-        foreach ($keys as $key) {
-            if (\array_key_exists($key, $data)) {
-                $submitted = true;
+        $incoming = \array_intersect_key($data, \array_flip($keys));
 
-                break;
-            }
-        }
-
-        if (!$submitted) {
-            return $existing;
-        }
-
-        $additionalData = [];
-        foreach ($keys as $key) {
-            $additionalData[$key] = $data[$key] ?? null;
-        }
-
-        return $additionalData;
+        return \array_merge($existing, $incoming);
     }
 }
