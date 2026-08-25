@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Alengo\SuluContentExtraBundle\Messenger;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Sulu\Content\Domain\Model\ContentRichEntityInterface;
 
 /**
  * Wraps Sulu's Restore{Snippet,Article,Page}VersionMessageHandler to work around a
@@ -21,11 +22,13 @@ use Doctrine\ORM\EntityManagerInterface;
  *   ContentNotFoundException: No content found for attributes [..., version=<historic>]
  *   ... Available attributes: [..., version=0]
  *
- * Detaching all managed entities before delegating forces the inner handler's `getOneBy`
- * to hydrate a fresh collection containing every requested version. Restore is the terminal
- * action of its request (the *Controller::handleAction runs it before anything else that
- * needs the managed graph), so clearing here has no side effects; the messenger
- * DoctrineFlushMiddleware still flushes the copy the inner handler persists afterwards.
+ * We detach only the already-managed content-root entities (snippet/article/page). That
+ * drops the stale collection so the inner handler's `getOneBy` hydrates a fresh one with
+ * every requested version, while leaving everything else managed — crucially the
+ * authenticated User, which UserBlameSubscriber::onFlush writes as `changer`/`creator` on
+ * the restored dimension content. A blanket EntityManager::clear() would also detach that
+ * User, so the subsequent flush would fail with "Unable to find
+ * 'Sulu\Bundle\SecurityBundle\Entity\User' entity identifier associated with the UnitOfWork".
  *
  * Wired by {@see \Alengo\SuluContentExtraBundle\DependencyInjection\Compiler\RestoreVersionHandlerRefreshPass},
  * which moves the `messenger.message_handler` tag from each Sulu handler onto an instance of
@@ -46,7 +49,20 @@ final class RestoreVersionEntityManagerRefreshHandler
 
     public function __invoke(object $message): object
     {
-        $this->entityManager->clear();
+        $unitOfWork = $this->entityManager->getUnitOfWork();
+
+        $contentRichEntities = [];
+        foreach ($unitOfWork->getIdentityMap() as $entities) {
+            foreach ($entities as $entity) {
+                if ($entity instanceof ContentRichEntityInterface) {
+                    $contentRichEntities[] = $entity;
+                }
+            }
+        }
+
+        foreach ($contentRichEntities as $entity) {
+            $this->entityManager->detach($entity);
+        }
 
         return ($this->inner)($message);
     }
