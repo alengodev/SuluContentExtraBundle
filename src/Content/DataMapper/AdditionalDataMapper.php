@@ -101,8 +101,11 @@ final class AdditionalDataMapper implements DataMapperInterface
      * empty version restore clears the field instead of leaving stale data behind.
      *
      * Keys hidden for the submitted template are omitted. A persist that carries no
-     * additionalData at all (a foreign write that never went through the normalizer) leaves
-     * the existing data untouched, so it can never be wiped by accident.
+     * additionalData but already has stored values (a foreign write that never went through
+     * the normalizer) leaves them untouched, so they can never be wiped by accident. The
+     * very first write of a new entry carries no additionalData either, but starts from an
+     * empty value — there the visible key set is initialised (with null values) so
+     * additionalData is populated from the start, just like seo/excerpt.
      *
      * @param array<string, mixed> $existing
      * @param array<string, mixed> $data
@@ -113,7 +116,7 @@ final class AdditionalDataMapper implements DataMapperInterface
      */
     private function writeKeys(array $existing, array $data, array $keys, array $hiddenKeys): array
     {
-        if (!$this->carriesAdditionalData($data, $keys)) {
+        if ([] !== $existing && !$this->carriesAdditionalData($data, $keys)) {
             return $existing;
         }
 
