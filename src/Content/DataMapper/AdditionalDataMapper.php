@@ -33,11 +33,11 @@ final class AdditionalDataMapper implements DataMapperInterface
 
         // In preview mode both dimension contents are the same merged object.
         // Calling setAdditionalData() twice would overwrite the first set of keys,
-        // so merge all configured keys in a single call.
+        // so write all configured keys in a single call.
         if ($unlocalizedDimensionContent === $localizedDimensionContent) {
             if ($unlocalizedDimensionContent instanceof AdditionalDataInterface) {
                 $unlocalizedDimensionContent->setAdditionalData(
-                    $this->mergeKeys(
+                    $this->writeKeys(
                         $unlocalizedDimensionContent->getAdditionalData(),
                         $data,
                         \array_merge($this->unlocalizedKeys, $this->localizedKeys),
@@ -50,7 +50,7 @@ final class AdditionalDataMapper implements DataMapperInterface
 
         if ($unlocalizedDimensionContent instanceof AdditionalDataInterface) {
             $unlocalizedDimensionContent->setAdditionalData(
-                $this->mergeKeys(
+                $this->writeKeys(
                     $unlocalizedDimensionContent->getAdditionalData(),
                     $data,
                     $this->unlocalizedKeys,
@@ -60,7 +60,7 @@ final class AdditionalDataMapper implements DataMapperInterface
 
         if ($localizedDimensionContent instanceof AdditionalDataInterface) {
             $localizedDimensionContent->setAdditionalData(
-                $this->mergeKeys(
+                $this->writeKeys(
                     $localizedDimensionContent->getAdditionalData(),
                     $data,
                     $this->localizedKeys,
@@ -70,19 +70,24 @@ final class AdditionalDataMapper implements DataMapperInterface
     }
 
     /**
-     * Merge the incoming values for the configured keys over the already stored
-     * additionalData. Only keys that are actually present in $data are updated; keys
-     * missing from the submission keep their existing value.
+     * Produce the additionalData to store for the given configured keys.
      *
-     * This guarantees additionalData is always written back on every persist, even when
-     * the current submission carries no additionalData entries — e.g. a save of the main
-     * content tab (which lives in a separate form and does not include these fields) or a
-     * version restore of content that predates the field. Without this, such a persist
-     * would reset additionalData to an empty array and silently drop the stored values,
-     * which in turn corrupts the version snapshot created from the draft.
+     * The additionalData fields live in their own admin form, separate from the main
+     * content form. Depending on which form is being saved, $data either carries the
+     * additionalData fields or none of them:
      *
-     * A key that is present but null is treated as an explicit clear (dropped), so
-     * emptying a field in the additionalData form still removes it.
+     *  - When the additionalData form is submitted, at least one configured key is present
+     *    in $data. In that case the *complete* configured key set is written back, using
+     *    the submitted value and defaulting anything omitted to null — so empty fields are
+     *    stored too, exactly like Sulu persists the full "seo"/"excerpt" extension data.
+     *    This keeps every configured key present in the stored JSON instead of silently
+     *    dropping the empty ones.
+     *
+     *  - When none of the configured keys is present, the submission belongs to another
+     *    form (e.g. the main content tab) or to a version restore of content that predates
+     *    the field. The existing additionalData is then preserved unchanged, so an
+     *    unrelated save never wipes it — which would otherwise also corrupt the version
+     *    snapshot taken from the draft.
      *
      * @param array<string, mixed> $existing
      * @param array<string, mixed> $data
@@ -90,17 +95,30 @@ final class AdditionalDataMapper implements DataMapperInterface
      *
      * @return array<string, mixed>
      */
-    private function mergeKeys(array $existing, array $data, array $keys): array
+    private function writeKeys(array $existing, array $data, array $keys): array
     {
         if ([] === $keys) {
             return $existing;
         }
 
-        $incoming = \array_intersect_key($data, \array_flip($keys));
+        $submitted = false;
+        foreach ($keys as $key) {
+            if (\array_key_exists($key, $data)) {
+                $submitted = true;
 
-        return \array_filter(
-            \array_merge($existing, $incoming),
-            static fn ($value) => null !== $value,
-        );
+                break;
+            }
+        }
+
+        if (!$submitted) {
+            return $existing;
+        }
+
+        $additionalData = [];
+        foreach ($keys as $key) {
+            $additionalData[$key] = $data[$key] ?? null;
+        }
+
+        return $additionalData;
     }
 }
