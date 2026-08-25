@@ -36,7 +36,7 @@ class ArticleAdditionalAdmin extends AbstractAdditionalAdmin
                     ->setFormKey($this->formKey)
                     ->setTabTitle($this->tabTitle)
                     ->setTitleVisible(true)
-                    ->addToolbarActions([self::createSaveToolbarAction()])
+                    ->addToolbarActions([self::createSaveToolbarAction(), self::createEditToolbarAction()])
                     ->setPreviewCondition('availableLocales && locale in availableLocales')
                     ->setTabOrder(45)
                     ->setParent($parentView),

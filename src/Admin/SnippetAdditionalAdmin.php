@@ -33,7 +33,7 @@ class SnippetAdditionalAdmin extends AbstractAdditionalAdmin
                 ->setFormKey($this->formKey)
                 ->setTabTitle($this->tabTitle)
                 ->setTitleVisible(true)
-                ->addToolbarActions([self::createSaveToolbarAction()])
+                ->addToolbarActions([self::createSaveToolbarAction(), self::createEditToolbarAction()])
                 ->setTabOrder(45)
                 ->setParent(SnippetAdmin::EDIT_TABS_VIEW),
         );

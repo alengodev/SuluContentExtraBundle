@@ -30,7 +30,7 @@ class PageAdditionalAdmin extends AbstractAdditionalAdmin
                 ->setFormKey($this->formKey)
                 ->setTabTitle($this->tabTitle)
                 ->setTitleVisible(true)
-                ->addToolbarActions([self::createSaveToolbarAction()])
+                ->addToolbarActions([self::createSaveToolbarAction(), self::createEditToolbarAction()])
                 ->addRouterAttributesToFormRequest(['parentId', 'webspace'])
                 ->disablePreviewWebspaceChooser()
                 ->setPreviewCondition('linkOn == false && shadowOn == false && availableLocales && locale in availableLocales')
