@@ -8,6 +8,8 @@ use Alengo\SuluContentExtraBundle\Entity\Article;
 use Alengo\SuluContentExtraBundle\Entity\ArticleDimensionContent;
 use Alengo\SuluContentExtraBundle\Entity\Page;
 use Alengo\SuluContentExtraBundle\Entity\PageDimensionContent;
+use Alengo\SuluContentExtraBundle\Entity\Snippet;
+use Alengo\SuluContentExtraBundle\Entity\SnippetDimensionContent;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
@@ -23,15 +25,24 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->append($this->buildContentNode(
                     'page',
+                    'page_class',
                     Page::class,
                     PageDimensionContent::class,
                     'page_additional_data',
                 ))
                 ->append($this->buildContentNode(
                     'article',
+                    'article_class',
                     Article::class,
                     ArticleDimensionContent::class,
                     'article_additional_data',
+                ))
+                ->append($this->buildContentNode(
+                    'snippet',
+                    'snippet_class',
+                    Snippet::class,
+                    SnippetDimensionContent::class,
+                    'snippet_additional_data',
                 ))
             ->end()
         ;
@@ -41,12 +52,11 @@ class Configuration implements ConfigurationInterface
 
     private function buildContentNode(
         string $name,
+        string $rootClassKey,
         string $defaultRootClass,
         string $defaultEntityClass,
         string $defaultFormKey,
     ): ArrayNodeDefinition {
-        $rootClassKey = 'page' === $name ? 'page_class' : 'article_class';
-
         $node = (new TreeBuilder($name))->getRootNode();
 
         $node

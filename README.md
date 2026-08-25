@@ -1,13 +1,13 @@
 # SuluContentExtraBundle
 
-Extends [Sulu CMS](https://sulu.io/) 3.x Pages and Articles with configurable additional data and navigation link markers.
+Extends [Sulu CMS](https://sulu.io/) 3.x Pages, Articles and Snippets with configurable additional data and navigation link markers.
 
 ## Features
 
-- **Additional Data tab** — auto-registered for Pages and Articles via `PreviewFormViewBuilder`
-- **Built-in entities** — concrete `Page`, `PageDimensionContent`, `Article`, `ArticleDimensionContent` extending Sulu's base classes; no project entities required
+- **Additional Data tab** — auto-registered for Pages, Articles and Snippets via `PreviewFormViewBuilder`
+- **Built-in entities** — concrete `Page`, `PageDimensionContent`, `Article`, `ArticleDimensionContent`, `Snippet`, `SnippetDimensionContent` extending Sulu's base classes; no project entities required
 - **Configurable field mapping** — declare which form fields go to the unlocalized vs. localized dimension content via bundle config
-- **Zero-config entity registration** — `sulu_page` / `sulu_article` objects are auto-configured via `PrependExtensionInterface`
+- **Zero-config entity registration** — `sulu_page` / `sulu_article` / `sulu_snippet` objects are auto-configured via `PrependExtensionInterface`
 - **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
 - **Sortable template groups** — `SortedGroupProvider` decorates `sulu_admin.metadata_group_provider` and orders form groups (Article admin tabs, SmartContent Type filter, ...) by the appearance order of their `sulu_admin.template_group.*` keys in `translations/admin+intl-icu.{locale}.yaml`
 
@@ -50,21 +50,29 @@ alengo_content_extra:
             - template_theme
         localized_keys:
             - notes
+    snippet:
+        form_key: snippet_additional_data     # default
+        unlocalized_keys:
+            - template_theme
+        localized_keys:
+            - notes
 ```
 
-To use additional data only for Articles (not Pages):
+To use additional data only for Articles (not Pages or Snippets):
 
 ```yaml
 alengo_content_extra:
     page:
         enabled: false
+    snippet:
+        enabled: false
 ```
 
-To disable the Article tab entirely:
+To disable the Snippet tab entirely:
 
 ```yaml
 alengo_content_extra:
-    article:
+    snippet:
         enabled: false
 ```
 
@@ -88,6 +96,14 @@ alengo_content_extra:
         tab_title: sulu_admin.app.additional_data
         unlocalized_keys: []
         localized_keys: []
+    snippet:
+        enabled: true
+        snippet_class: Alengo\SuluContentExtraBundle\Entity\Snippet
+        entity_class: Alengo\SuluContentExtraBundle\Entity\SnippetDimensionContent
+        form_key: snippet_additional_data
+        tab_title: sulu_admin.app.additional_data
+        unlocalized_keys: []
+        localized_keys: []
 ```
 
 ## Provided Forms
@@ -97,6 +113,7 @@ The bundle does **not** ship default form XML files — the project controls fie
 ```
 config/forms/page_additional_data.xml
 config/forms/article_additional_data.xml
+config/forms/snippet_additional_data.xml
 ```
 
 Example form:
@@ -136,7 +153,9 @@ Example form:
 | `Entity\PageDimensionContent` | Dimension content with `additionalData` JSON column (`pa_page_dimension_contents`) |
 | `Entity\Article` | Concrete Doctrine entity (`ar_articles`) extending Sulu's `Article` |
 | `Entity\ArticleDimensionContent` | Dimension content with `additionalData` JSON column (`ar_article_dimension_contents`) |
-| `Model\AdditionalDataInterface` | Interface implemented by both dimension content entities |
+| `Entity\Snippet` | Concrete Doctrine entity (`sn_snippets`) extending Sulu's `Snippet` |
+| `Entity\SnippetDimensionContent` | Dimension content with `additionalData` JSON column (`sn_snippet_dimension_contents`) |
+| `Model\AdditionalDataInterface` | Interface implemented by all dimension content entities |
 
 ## Navigation Link Markers
 

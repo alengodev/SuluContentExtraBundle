@@ -6,6 +6,7 @@ namespace Alengo\SuluContentExtraBundle\DependencyInjection\Compiler;
 
 use Alengo\SuluContentExtraBundle\Content\ResourceLoader\ArticleAdditionalDataResourceLoader;
 use Alengo\SuluContentExtraBundle\Content\ResourceLoader\PageAdditionalDataResourceLoader;
+use Alengo\SuluContentExtraBundle\Content\ResourceLoader\SnippetAdditionalDataResourceLoader;
 use Alengo\SuluContentExtraBundle\Content\SmartContent\AdditionalDataRequestCollector;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -27,12 +28,14 @@ final class AdditionalDataResourceLoaderPass implements CompilerPassInterface
     private const TAG = 'sulu_content.resource_loader';
 
     /**
-     * Original loader service id => wrapper class. Both wrapped DimensionContent types
-     * implement AdditionalDataInterface (PageDimensionContent, ArticleDimensionContent).
+     * Original loader service id => wrapper class. All wrapped DimensionContent types
+     * implement AdditionalDataInterface (PageDimensionContent, ArticleDimensionContent,
+     * SnippetDimensionContent).
      */
     private const WRAPPERS = [
         'sulu_article.article_resource_loader' => ArticleAdditionalDataResourceLoader::class,
         'sulu_page.page_resource_loader' => PageAdditionalDataResourceLoader::class,
+        'sulu_snippet.snippet_resource_loader' => SnippetAdditionalDataResourceLoader::class,
     ];
 
     public function process(ContainerBuilder $container): void

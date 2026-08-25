@@ -6,6 +6,7 @@ namespace Alengo\SuluContentExtraBundle\DependencyInjection;
 
 use Alengo\SuluContentExtraBundle\Admin\ArticleAdditionalAdmin;
 use Alengo\SuluContentExtraBundle\Admin\PageAdditionalAdmin;
+use Alengo\SuluContentExtraBundle\Admin\SnippetAdditionalAdmin;
 use Alengo\SuluContentExtraBundle\Content\DataMapper\AdditionalDataMapper;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -42,6 +43,15 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
             ]);
         }
 
+        if ($config['snippet']['enabled'] && $container->hasExtension('sulu_snippet')) {
+            $container->prependExtensionConfig('sulu_snippet', [
+                'objects' => [
+                    'snippet' => ['model' => $config['snippet']['snippet_class']],
+                    'snippet_content' => ['model' => $config['snippet']['entity_class']],
+                ],
+            ]);
+        }
+
         // Doctrine ResolveTargetEntity: replace Sulu's original entity class references in
         // association mappings with the configured concrete classes. This ensures Doctrine never
         // generates proxies for the original Sulu classes, allowing auto_generate_proxy_classes: false.
@@ -52,6 +62,9 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
             }
             if ($config['article']['enabled'] && $container->hasExtension('sulu_article')) {
                 $resolveTargetEntities[\Sulu\Article\Domain\Model\ArticleDimensionContent::class] = $config['article']['entity_class'];
+            }
+            if ($config['snippet']['enabled'] && $container->hasExtension('sulu_snippet')) {
+                $resolveTargetEntities[\Sulu\Snippet\Domain\Model\SnippetDimensionContent::class] = $config['snippet']['entity_class'];
             }
             if ([] !== $resolveTargetEntities) {
                 $container->prependExtensionConfig('doctrine', [
@@ -92,6 +105,19 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 $config['article']['form_key'],
                 $config['article']['tab_title'],
                 new Reference('sulu_admin.metadata_group_provider'),
+            ));
+        }
+
+        if ($config['snippet']['enabled']) {
+            $container->setDefinition('alengo_content_extra.snippet_data_mapper', $this->createDataMapperDefinition(
+                $config['snippet']['entity_class'],
+                $config['snippet']['unlocalized_keys'],
+                $config['snippet']['localized_keys'],
+            ));
+            $container->setDefinition(SnippetAdditionalAdmin::class, $this->createAdminDefinition(
+                SnippetAdditionalAdmin::class,
+                $config['snippet']['form_key'],
+                $config['snippet']['tab_title'],
             ));
         }
     }
