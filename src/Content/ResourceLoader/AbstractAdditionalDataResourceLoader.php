@@ -19,11 +19,12 @@ use Sulu\Content\Application\ResourceLoader\Loader\ResourceLoaderInterface;
  * receives the aggregated DimensionContent (which carries the additional data) and its
  * content is merged onto each resolved item.
  *
- * To avoid attaching additionalData to every item unconditionally, we only attach it when
- * the smart_content `properties` config references it (e.g. a param value "additionalData"
- * or "additionalData.location"). The enhancement hook itself never receives `properties`,
- * so AdditionalDataResolver — which does — flags the resource via AdditionalDataRequestCollector.
- * Result in templates: `item.additionalData.location`.
+ * To avoid dumping the whole additionalData array onto every item, we attach only the
+ * fields the smart_content `properties` config references (e.g. "additionalData.location")
+ * — and we attach them nested under an "additionalData" key so the property paths resolve
+ * (item.additionalData.location → the "location" alias). Nothing referenced → nothing
+ * attached. The enhancement hook never receives `properties`, so AdditionalDataResolver —
+ * which does — records the requested fields in AdditionalDataRequestCollector.
  *
  * Concrete subclasses only bind the loader key (article, page, ...) via getKey().
  */
@@ -53,11 +54,22 @@ abstract class AbstractAdditionalDataResourceLoader implements ResourceLoaderCon
             $view = $enhancement->getView();
         }
 
-        if (
-            $resource instanceof AdditionalDataInterface
-            && $this->requestCollector->isRequested($resource->getResource()->getUuid())
-        ) {
-            $content['additionalData'] = $resource->getAdditionalData();
+        if ($resource instanceof AdditionalDataInterface) {
+            $uuid = $resource->getResource()->getUuid();
+
+            if ($this->requestCollector->isRequested($uuid)) {
+                $data = $resource->getAdditionalData();
+
+                // Attach each referenced field FLAT under its alias. Sulu's property-path
+                // mapping cannot resolve underscore keys (additionalData.template_theme → null),
+                // so we expose the values directly as content keys (item.<alias>) instead — no
+                // nested "additionalData" array is added to the item.
+                foreach ($this->requestCollector->requestedMap($uuid) as $alias => $field) {
+                    if (\array_key_exists($field, $data)) {
+                        $content[$alias] = $data[$field];
+                    }
+                }
+            }
         }
 
         return ContentView::create($content, $view);

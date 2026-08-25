@@ -12,27 +12,40 @@ use Symfony\Contracts\Service\ResetInterface;
  * but does NOT receive properties).
  *
  * The resolver runs immediately before the enhancement for the same item; when the
- * properties reference additionalData it flags the item's resource UUID here, and the
- * enhancement only attaches additionalData for flagged UUIDs. Reset per request/worker
- * message so flags never leak across resolutions.
+ * properties reference additionalData it records the requested alias => field mapping
+ * here, and the enhancement attaches exactly those fields (under their alias) to the item.
+ * Reset per request/worker message so nothing leaks across resolutions.
  */
 final class AdditionalDataRequestCollector implements ResetInterface
 {
-    /** @var array<string, true> */
-    private array $requested = [];
+    /** @var array<string, array<string, string>> resource uuid => alias => additionalData field */
+    private array $map = [];
 
-    public function request(string $uuid): void
+    /**
+     * @param array<string, string> $aliasToField alias => additionalData field name
+     */
+    public function request(string $uuid, array $aliasToField): void
     {
-        $this->requested[$uuid] = true;
+        foreach ($aliasToField as $alias => $field) {
+            $this->map[$uuid][$alias] = $field;
+        }
     }
 
     public function isRequested(string $uuid): bool
     {
-        return isset($this->requested[$uuid]);
+        return !empty($this->map[$uuid]);
+    }
+
+    /**
+     * @return array<string, string> alias => field
+     */
+    public function requestedMap(string $uuid): array
+    {
+        return $this->map[$uuid] ?? [];
     }
 
     public function reset(): void
     {
-        $this->requested = [];
+        $this->map = [];
     }
 }

@@ -12,6 +12,8 @@ use Sulu\Content\Domain\Model\DimensionContentInterface;
 
 final class AdditionalDataResolver implements ResolverInterface
 {
+    private const PREFIX = 'additionalData.';
+
     public function __construct(
         private readonly AdditionalDataRequestCollector $requestCollector,
     ) {
@@ -23,11 +25,15 @@ final class AdditionalDataResolver implements ResolverInterface
             return null;
         }
 
-        // Smart-content items pass their `properties` config here. When it references
-        // additionalData, flag this resource so the resource-loader enhancement attaches
-        // the data to the item (the enhancement itself never sees `properties`).
-        if (null !== $properties && $this->referencesAdditionalData($properties)) {
-            $this->requestCollector->request($dimensionContent->getResource()->getUuid());
+        // Smart-content items pass their `properties` config here. Record which additionalData
+        // fields it references so the resource-loader enhancement attaches exactly those to the
+        // item (the enhancement itself never sees `properties`). Nothing referenced → nothing
+        // attached.
+        if (null !== $properties) {
+            $map = $this->parseRequestedFields($properties);
+            if ([] !== $map) {
+                $this->requestCollector->request($dimensionContent->getResource()->getUuid(), $map);
+            }
         }
 
         return ContentView::create(
@@ -37,16 +43,30 @@ final class AdditionalDataResolver implements ResolverInterface
     }
 
     /**
+     * Maps each `properties` param that points at an additionalData field to
+     * alias => field, e.g. <param name="theme" value="additionalData.template_theme"/>
+     * becomes ['theme' => 'template_theme'].
+     *
      * @param array<string, string> $properties alias => property path
+     *
+     * @return array<string, string> alias => additionalData field
      */
-    private function referencesAdditionalData(array $properties): bool
+    private function parseRequestedFields(array $properties): array
     {
-        foreach ($properties as $path) {
-            if (\is_string($path) && ('additionalData' === $path || \str_starts_with($path, 'additionalData.'))) {
-                return true;
+        $map = [];
+
+        foreach ($properties as $alias => $path) {
+            if (!\is_string($alias) || !\is_string($path) || !\str_starts_with($path, self::PREFIX)) {
+                continue;
+            }
+
+            // Only the first path segment is a real additionalData field.
+            $field = \explode('.', \substr($path, \strlen(self::PREFIX)))[0];
+            if ('' !== $field) {
+                $map[$alias] = $field;
             }
         }
 
-        return false;
+        return $map;
     }
 }
