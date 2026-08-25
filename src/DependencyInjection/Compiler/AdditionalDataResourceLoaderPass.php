@@ -6,6 +6,7 @@ namespace Alengo\SuluContentExtraBundle\DependencyInjection\Compiler;
 
 use Alengo\SuluContentExtraBundle\Content\ResourceLoader\ArticleAdditionalDataResourceLoader;
 use Alengo\SuluContentExtraBundle\Content\ResourceLoader\PageAdditionalDataResourceLoader;
+use Alengo\SuluContentExtraBundle\Content\SmartContent\AdditionalDataRequestCollector;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -50,7 +51,10 @@ final class AdditionalDataResourceLoaderPass implements CompilerPassInterface
 
             $wrapperId = 'alengo_content_extra.' . $wrapperClass::getKey() . '_resource_loader';
             $wrapper = $container->register($wrapperId, $wrapperClass)
-                ->setArguments([new Reference($originalId)])
+                ->setArguments([
+                    new Reference($originalId),
+                    new Reference(AdditionalDataRequestCollector::class),
+                ])
                 ->setPublic(false);
 
             foreach ($tags as $attributes) {

@@ -17,6 +17,10 @@ services:
         tags:
             - { name: 'sulu_content.normalizer', priority: 20 }
 
+    Alengo\SuluContentExtraBundle\Content\SmartContent\AdditionalDataRequestCollector:
+        tags:
+            - { name: 'kernel.reset', method: 'reset' }
+
     Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver:
         tags:
             - { name: 'sulu_content.content_resolver', type: 'additional' }
