@@ -35,4 +35,16 @@ class NavigationLinkTypeResolver implements ResolverInterface
 
         return [] !== $data ? ContentView::create($data, []) : null;
     }
+
+    public function getType(): string
+    {
+        return 'navlink';
+    }
+
+    public function getOutputPath(): ?string
+    {
+        // null keeps the pre-3.1 default location [extension][navlink]; the
+        // navigation tree resolver reads these fields via its property mapping.
+        return null;
+    }
 }

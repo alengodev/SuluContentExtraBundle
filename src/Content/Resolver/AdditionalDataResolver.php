@@ -42,6 +42,18 @@ final class AdditionalDataResolver implements ResolverInterface
         );
     }
 
+    public function getType(): string
+    {
+        return 'additional';
+    }
+
+    public function getOutputPath(): ?string
+    {
+        // null keeps the pre-3.1 default location [extension][additional],
+        // read in templates as `extension.additional.*`.
+        return null;
+    }
+
     /**
      * Maps each `properties` param that points at an additionalData field to
      * alias => field, e.g. <param name="theme" value="additionalData.template_theme"/>
