@@ -5,10 +5,16 @@ services:
 
     Alengo\SuluContentExtraBundle\Content\Enhancer\NavigationLinkEnhancer: ~
 
-    # Autoconfiguration tags ResolverInterface implementations with
-    # 'sulu_content.content_resolver'; type/output path now come from the class
-    # (getType()/getOutputPath()), so the tag's former `type` attribute is gone.
-    Alengo\SuluContentExtraBundle\Content\Resolver\NavigationLinkTypeResolver: ~
+    # Content resolvers are declared dual-compatible (Sulu 3.0.x and 3.1+):
+    # - Sulu 3.0.x reads the resolver type from the tag's `type` attribute.
+    # - Sulu 3.1 ignores that attribute and reads getType()/getOutputPath() from
+    #   the class instead, and autoconfigures ResolverInterface with this tag.
+    # `autoconfigure: false` keeps the explicit tag as the single source under 3.1
+    # (autoconfigure + explicit tag would register the resolver twice).
+    Alengo\SuluContentExtraBundle\Content\Resolver\NavigationLinkTypeResolver:
+        autoconfigure: false
+        tags:
+            - { name: 'sulu_content.content_resolver', type: 'navlink' }
 
     Alengo\SuluContentExtraBundle\Content\Merger\AdditionalDataMerger:
         tags:
@@ -22,7 +28,10 @@ services:
         tags:
             - { name: 'kernel.reset', method: 'reset' }
 
-    Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver: ~
+    Alengo\SuluContentExtraBundle\Content\Resolver\AdditionalDataResolver:
+        autoconfigure: false
+        tags:
+            - { name: 'sulu_content.content_resolver', type: 'additional' }
 
     # Sort the form groups returned by `sulu_admin.metadata_group_provider`
     # by the order in which their translation keys appear under
