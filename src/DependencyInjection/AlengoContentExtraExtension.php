@@ -134,6 +134,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 ArticleAdditionalAdmin::class,
                 $article,
                 new Reference('sulu_admin.metadata_group_provider'),
+                new Reference('sulu_security.security_checker'),
             ));
         }
 
@@ -143,6 +144,7 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
                 SnippetAdditionalAdmin::class,
                 $snippet,
                 new Reference('sulu_admin.metadata_group_provider'),
+                new Reference('sulu_security.security_checker'),
             ));
         }
     }
