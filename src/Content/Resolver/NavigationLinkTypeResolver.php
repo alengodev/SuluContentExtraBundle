@@ -16,7 +16,7 @@ use Sulu\Page\Domain\Model\PageDimensionContentInterface;
  */
 class NavigationLinkTypeResolver implements ResolverInterface
 {
-    private const array SUPPORTED_PROPERTIES = ['sourceLink', 'sourceUuid'];
+    private const SUPPORTED_PROPERTIES = ['sourceLink', 'sourceLinkResolved', 'sourceUuid'];
 
     public function resolve(DimensionContentInterface $dimensionContent, ?array $properties = null): ?ContentView
     {

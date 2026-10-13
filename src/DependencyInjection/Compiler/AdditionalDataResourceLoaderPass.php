@@ -61,7 +61,7 @@ final class AdditionalDataResourceLoaderPass implements CompilerPassInterface
                 ->setPublic(false);
 
             foreach ($tags as $attributes) {
-                $wrapper->addTag(self::TAG, $attributes);
+                $wrapper->addTag(self::TAG, \is_array($attributes) ? $attributes : []);
             }
         }
     }

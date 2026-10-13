@@ -10,12 +10,12 @@ use Sulu\Content\Application\ContentResolver\Resolver\ResolverInterface;
 use Sulu\Content\Application\ContentResolver\Value\ContentView;
 use Sulu\Content\Domain\Model\DimensionContentInterface;
 
-final class AdditionalDataResolver implements ResolverInterface
+final readonly class AdditionalDataResolver implements ResolverInterface
 {
     private const PREFIX = 'additionalData.';
 
     public function __construct(
-        private readonly AdditionalDataRequestCollector $requestCollector,
+        private AdditionalDataRequestCollector $requestCollector,
     ) {
     }
 
@@ -28,12 +28,10 @@ final class AdditionalDataResolver implements ResolverInterface
         // Smart-content items pass their `properties` config here. Record which additionalData
         // fields it references so the resource-loader enhancement attaches exactly those to the
         // item (the enhancement itself never sees `properties`). Nothing referenced → nothing
-        // attached.
-        if (null !== $properties) {
-            $map = $this->parseRequestedFields($properties);
-            if ([] !== $map) {
-                $this->requestCollector->request($dimensionContent->getResource()->getUuid(), $map);
-            }
+        // attached; recording the empty mapping also clears one left by an earlier item.
+        $resourceId = $dimensionContent->getResource()->getId();
+        if (null !== $properties && \is_string($resourceId)) {
+            $this->requestCollector->request($resourceId, $this->parseRequestedFields($properties));
         }
 
         return ContentView::create(
@@ -68,7 +66,7 @@ final class AdditionalDataResolver implements ResolverInterface
         $map = [];
 
         foreach ($properties as $alias => $path) {
-            if (!\is_string($alias) || !\is_string($path) || !\str_starts_with($path, self::PREFIX)) {
+            if (!\str_starts_with($path, self::PREFIX)) {
                 continue;
             }
 

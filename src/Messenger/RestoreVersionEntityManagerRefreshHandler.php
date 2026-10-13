@@ -22,9 +22,11 @@ use Sulu\Content\Domain\Model\ContentRichEntityInterface;
  *   ContentNotFoundException: No content found for attributes [..., version=<historic>]
  *   ... Available attributes: [..., version=0]
  *
- * We detach only the already-managed content-root entities (snippet/article/page). That
- * drops the stale collection so the inner handler's `getOneBy` hydrates a fresh one with
- * every requested version, while leaving everything else managed — crucially the
+ * We detach only the already-managed content root that is being restored (matched by the
+ * entity class and the `uuid` of the message identifier). That drops the stale collection
+ * so the inner handler's `getOneBy` hydrates a fresh one with every requested version,
+ * while leaving everything else managed — other content roots loaded in the same request
+ * keep their pending changes, and crucially the
  * authenticated User, which UserBlameSubscriber::onFlush writes as `changer`/`creator` on
  * the restored dimension content. A blanket EntityManager::clear() would also detach that
  * User, so the subsequent flush would fail with "Unable to find
@@ -36,34 +38,58 @@ use Sulu\Content\Domain\Model\ContentRichEntityInterface;
  *
  * @internal
  */
-final class RestoreVersionEntityManagerRefreshHandler
+final readonly class RestoreVersionEntityManagerRefreshHandler
 {
     /**
      * @param callable(object): object $inner the wrapped Sulu restore handler
+     * @param class-string<ContentRichEntityInterface<*>> $entityClass      the content root the message restores
+     * @param string $identifierGetter message method returning the identifier, e.g. ['uuid' => ...]
      */
     public function __construct(
-        private readonly mixed $inner,
-        private readonly EntityManagerInterface $entityManager,
+        private mixed $inner,
+        private EntityManagerInterface $entityManager,
+        private string $entityClass,
+        private string $identifierGetter,
     ) {
     }
 
     public function __invoke(object $message): object
     {
-        $unitOfWork = $this->entityManager->getUnitOfWork();
+        $uuid = $this->resolveUuid($message);
 
-        $contentRichEntities = [];
-        foreach ($unitOfWork->getIdentityMap() as $entities) {
+        $staleEntities = [];
+        foreach ($this->entityManager->getUnitOfWork()->getIdentityMap() as $entities) {
             foreach ($entities as $entity) {
-                if ($entity instanceof ContentRichEntityInterface) {
-                    $contentRichEntities[] = $entity;
+                if (!$entity instanceof $this->entityClass) {
+                    continue;
                 }
+
+                // Without a uuid in the identifier we cannot tell which root is restored, so
+                // every root of the restored type is detached (still never other content types).
+                if (null !== $uuid && $entity->getId() !== $uuid) {
+                    continue;
+                }
+
+                $staleEntities[] = $entity;
             }
         }
 
-        foreach ($contentRichEntities as $entity) {
+        foreach ($staleEntities as $entity) {
             $this->entityManager->detach($entity);
         }
 
         return ($this->inner)($message);
+    }
+
+    private function resolveUuid(object $message): ?string
+    {
+        if (!\method_exists($message, $this->identifierGetter)) {
+            return null;
+        }
+
+        $identifier = $message->{$this->identifierGetter}();
+        $uuid = \is_array($identifier) ? ($identifier['uuid'] ?? null) : null;
+
+        return \is_string($uuid) && '' !== $uuid ? $uuid : null;
     }
 }

@@ -11,9 +11,11 @@ use Symfony\Contracts\Service\ResetInterface;
  * config) and the resource-loader enhancement (which surfaces additionalData on items
  * but does NOT receive properties).
  *
- * The resolver runs immediately before the enhancement for the same item; when the
- * properties reference additionalData it records the requested alias => field mapping
- * here, and the enhancement attaches exactly those fields (under their alias) to the item.
+ * Sulu's ContentResolver runs the resolvers of a smart-content item immediately before the
+ * enhancement of that same item. The resolver records the alias => field mapping of the
+ * item's `properties` here, replacing any earlier mapping for the uuid, and the enhancement
+ * takes it out again. So the same resource referenced by two smart contents with different
+ * `properties` gets exactly the fields of the one being resolved, never a mix of both.
  * Reset per request/worker message so nothing leaks across resolutions.
  */
 final class AdditionalDataRequestCollector implements ResetInterface
@@ -22,26 +24,33 @@ final class AdditionalDataRequestCollector implements ResetInterface
     private array $map = [];
 
     /**
+     * Records the fields the item currently being resolved references. An empty mapping
+     * clears an earlier one, so a later item without additionalData properties gets nothing.
+     *
      * @param array<string, string> $aliasToField alias => additionalData field name
      */
     public function request(string $uuid, array $aliasToField): void
     {
-        foreach ($aliasToField as $alias => $field) {
-            $this->map[$uuid][$alias] = $field;
-        }
-    }
+        if ([] === $aliasToField) {
+            unset($this->map[$uuid]);
 
-    public function isRequested(string $uuid): bool
-    {
-        return !empty($this->map[$uuid]);
+            return;
+        }
+
+        $this->map[$uuid] = $aliasToField;
     }
 
     /**
+     * Returns and forgets the mapping recorded for the item being enhanced.
+     *
      * @return array<string, string> alias => field
      */
-    public function requestedMap(string $uuid): array
+    public function take(string $uuid): array
     {
-        return $this->map[$uuid] ?? [];
+        $aliasToField = $this->map[$uuid] ?? [];
+        unset($this->map[$uuid]);
+
+        return $aliasToField;
     }
 
     public function reset(): void

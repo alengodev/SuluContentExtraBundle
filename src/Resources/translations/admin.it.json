@@ -1,0 +1,5 @@
+{
+    "sulu_admin.app.additional_data": "Dati aggiuntivi",
+    "sulu_content.workflow_transition_request.pre_validators.additional_data_required": "Campi dei dati aggiuntivi",
+    "alengo_content_extra.workflow_transition_request.additional_data_required.missing": "Mancano ancora campi dei dati aggiuntivi: {fields}."
+}

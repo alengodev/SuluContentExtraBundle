@@ -6,8 +6,11 @@ namespace Alengo\SuluContentExtraBundle\DependencyInjection\Compiler;
 
 use Alengo\SuluContentExtraBundle\Messenger\RestoreVersionEntityManagerRefreshHandler;
 use Sulu\Article\Application\Message\RestoreArticleVersionMessage;
+use Sulu\Article\Domain\Model\ArticleInterface;
 use Sulu\Page\Application\Message\RestorePageVersionMessage;
+use Sulu\Page\Domain\Model\PageInterface;
 use Sulu\Snippet\Application\Message\RestoreSnippetVersionMessage;
+use Sulu\Snippet\Domain\Model\SnippetInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -34,17 +37,18 @@ final class RestoreVersionHandlerRefreshPass implements CompilerPassInterface
     private const TAG = 'messenger.message_handler';
 
     /**
-     * Sulu restore-handler service id => restore message class it handles.
+     * Sulu restore-handler service id => [restored message class, content root interface,
+     * message method returning the identifier].
      */
     private const HANDLERS = [
-        'sulu_snippet.restore_snippet_version_handler' => RestoreSnippetVersionMessage::class,
-        'sulu_article.restore_article_version_handler' => RestoreArticleVersionMessage::class,
-        'sulu_page.restore_page_version_handler' => RestorePageVersionMessage::class,
+        'sulu_snippet.restore_snippet_version_handler' => [RestoreSnippetVersionMessage::class, SnippetInterface::class, 'getSnippetIdentifier'],
+        'sulu_article.restore_article_version_handler' => [RestoreArticleVersionMessage::class, ArticleInterface::class, 'getArticleIdentifier'],
+        'sulu_page.restore_page_version_handler' => [RestorePageVersionMessage::class, PageInterface::class, 'getPageIdentifier'],
     ];
 
     public function process(ContainerBuilder $container): void
     {
-        foreach (self::HANDLERS as $innerId => $messageClass) {
+        foreach (self::HANDLERS as $innerId => [$messageClass, $entityClass, $identifierGetter]) {
             if (!$container->hasDefinition($innerId)) {
                 continue;
             }
@@ -58,6 +62,8 @@ final class RestoreVersionHandlerRefreshPass implements CompilerPassInterface
                 ->setArguments([
                     new Reference($innerId),
                     new Reference('doctrine.orm.entity_manager'),
+                    $entityClass,
+                    $identifierGetter,
                 ])
                 ->addTag(self::TAG, ['handles' => $messageClass])
                 ->setPublic(false);

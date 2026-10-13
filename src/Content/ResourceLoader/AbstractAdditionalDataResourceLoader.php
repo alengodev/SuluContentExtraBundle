@@ -9,6 +9,7 @@ use Alengo\SuluContentExtraBundle\Model\AdditionalDataInterface;
 use Sulu\Content\Application\ContentResolver\Value\ContentView;
 use Sulu\Content\Application\ResourceLoader\Loader\ResourceLoaderContentViewEnhancementInterface;
 use Sulu\Content\Application\ResourceLoader\Loader\ResourceLoaderInterface;
+use Sulu\Content\Domain\Model\DimensionContentInterface;
 
 /**
  * Wraps a Sulu resource loader to expose the additional-data tab on smart-content items.
@@ -54,17 +55,17 @@ abstract class AbstractAdditionalDataResourceLoader implements ResourceLoaderCon
             $view = $enhancement->getView();
         }
 
-        if ($resource instanceof AdditionalDataInterface) {
-            $uuid = $resource->getResource()->getUuid();
-
-            if ($this->requestCollector->isRequested($uuid)) {
+        if ($resource instanceof AdditionalDataInterface && $resource instanceof DimensionContentInterface) {
+            $resourceId = $resource->getResource()->getId();
+            $requestedMap = \is_string($resourceId) ? $this->requestCollector->take($resourceId) : [];
+            if ([] !== $requestedMap) {
                 $data = $resource->getAdditionalData();
 
                 // Attach each referenced field FLAT under its alias. Sulu's property-path
                 // mapping cannot resolve underscore keys (additionalData.template_theme → null),
                 // so we expose the values directly as content keys (item.<alias>) instead — no
                 // nested "additionalData" array is added to the item.
-                foreach ($this->requestCollector->requestedMap($uuid) as $alias => $field) {
+                foreach ($requestedMap as $alias => $field) {
                     if (\array_key_exists($field, $data)) {
                         $content[$alias] = $data[$field];
                     }

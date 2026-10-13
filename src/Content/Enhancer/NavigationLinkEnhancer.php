@@ -27,13 +27,23 @@ class NavigationLinkEnhancer implements DimensionContentEnhancerInterface
 
         $hasProvider = isset($dimensionContent->getLinkData()['provider']);
         $sourceUuid = $dimensionContent->getResourceId();
+        $urlBefore = $dimensionContent->getTemplateData()['url'] ?? null;
 
         $result = $this->inner->enhance($dimensionContent);
 
-        if ($hasProvider && $result instanceof PageDimensionContentInterface) {
+        if ($hasProvider) {
+            // `sourceLink` marks a link page, whether its target could be resolved or not.
+            // `sourceLinkResolved` tells the two apart: the core enhancer returns the target's
+            // content for an internal link, writes a new `url` for any other provider, and
+            // leaves the link page untouched when the target is gone (deleted page, missing
+            // translation, unknown media, ...).
+            $resolved = $result !== $dimensionContent
+                || ($result->getTemplateData()['url'] ?? null) !== $urlBefore;
+
             $result->setTemplateData([
                 ...$result->getTemplateData(),
                 'sourceLink' => true,
+                'sourceLinkResolved' => $resolved,
                 'sourceUuid' => $sourceUuid,
             ]);
         }

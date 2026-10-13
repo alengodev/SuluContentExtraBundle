@@ -1,0 +1,47 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    tests:
+        name: PHP ${{ matrix.php }} / Sulu ${{ matrix.sulu }}${{ matrix.lowest && ' (lowest)' || '' }}
+        runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # Oldest supported combination: PHP 8.2 resolves Symfony 7.
+                    - php: '8.2'
+                      sulu: '3.0.8'
+                      lowest: true
+                    - php: '8.2'
+                      sulu: '3.0.*'
+                    # Review workflows, grouped snippets, resolver output paths.
+                    - php: '8.4'
+                      sulu: '3.1.x-dev'
+                      lint: true
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  coverage: none
+
+            - name: Install dependencies
+              run: composer update --no-interaction --no-progress --with "sulu/sulu:${{ matrix.sulu }}" ${{ matrix.lowest && '--prefer-lowest' || '' }}
+
+            # PHPStan, Rector and PHP-CS-Fixer analyse against the newest Sulu only:
+            # the 3.1 code paths reference classes 3.0.x does not have.
+            - name: Lint
+              if: matrix.lint
+              run: composer lint
+
+            - name: Tests
+              if: ${{ !matrix.lint }}
+              run: composer test

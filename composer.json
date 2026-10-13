@@ -11,16 +11,51 @@
     ],
     "require": {
         "php": "^8.2",
-        "sulu/sulu": "^3.0.7 || ~3.0.x-dev",
+        "sulu/sulu": "^3.0.8 || ~3.0.x-dev",
         "symfony/expression-language": "^6.4 || ^7.1 || ^8.0"
+    },
+    "require-dev": {
+        "php-cs-fixer/shim": "^3.58",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.5 || ^12.0",
+        "rector/rector": "^2.0"
     },
     "autoload": {
         "psr-4": {
             "Alengo\\SuluContentExtraBundle\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Alengo\\SuluContentExtraBundle\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "php-cs-fix": "php-cs-fixer fix",
+        "rector": "rector process",
+        "fix": [
+            "@rector",
+            "@php-cs-fix"
+        ],
+        "lint-php-cs": "php-cs-fixer fix --verbose --diff --dry-run",
+        "lint-rector": "rector process --dry-run",
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "test": "phpunit",
+        "lint": [
+            "@lint-php-cs",
+            "@lint-rector",
+            "@phpstan",
+            "@test"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
     },
     "extra": {
         "symfony": {

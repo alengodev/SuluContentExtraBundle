@@ -7,29 +7,41 @@ namespace Alengo\SuluContentExtraBundle\Content\DataMapper;
 use Alengo\SuluContentExtraBundle\Model\AdditionalDataInterface;
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\FieldMetadata;
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\FormMetadata;
+use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\ItemMetadata;
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\SectionMetadata;
 use Sulu\Bundle\AdminBundle\Metadata\MetadataProviderInterface;
 use Sulu\Content\Application\ContentDataMapper\DataMapper\DataMapperInterface;
 use Sulu\Content\Domain\Model\DimensionContentInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionFunction;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
-final class AdditionalDataMapper implements DataMapperInterface
+final readonly class AdditionalDataMapper implements DataMapperInterface
 {
-    private readonly ExpressionLanguage $expressionLanguage;
+    /**
+     * A jexl `|length` transform on a variable path, e.g. `blocks|length` or `a.b|length`.
+     */
+    private const JEXL_LENGTH_TRANSFORM = '/(?<![\w.])([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\|\s*length\b/';
+
+    private ExpressionLanguage $expressionLanguage;
 
     /**
-     * @param class-string       $entityClass
+     * @param class-string $entityClass
      * @param array<int, string> $unlocalizedKeys
      * @param array<int, string> $localizedKeys
      */
     public function __construct(
-        private readonly string $entityClass,
-        private readonly array $unlocalizedKeys,
-        private readonly array $localizedKeys,
-        private readonly string $formKey,
-        private readonly MetadataProviderInterface $formMetadataProvider,
+        private string $entityClass,
+        private array $unlocalizedKeys,
+        private array $localizedKeys,
+        private string $formKey,
+        private MetadataProviderInterface $formMetadataProvider,
     ) {
         $this->expressionLanguage = new ExpressionLanguage();
+        $this->expressionLanguage->addFunction(new ExpressionFunction(
+            'length',
+            static fn (string $value): string => \sprintf('\\%s::length(%s)', self::class, $value),
+            static fn (array $arguments, mixed $value): int => self::length($value),
+        ));
     }
 
     public function map(
@@ -109,8 +121,8 @@ final class AdditionalDataMapper implements DataMapperInterface
      *
      * @param array<string, mixed> $existing
      * @param array<string, mixed> $data
-     * @param array<int, string>   $keys
-     * @param array<string, true>  $hiddenKeys
+     * @param array<int, string> $keys
+     * @param array<string, true> $hiddenKeys
      *
      * @return array<string, mixed>
      */
@@ -146,7 +158,7 @@ final class AdditionalDataMapper implements DataMapperInterface
      * marker emitted by the normalizer, or any of the configured keys present as a flat value.
      *
      * @param array<string, mixed> $data
-     * @param array<int, string>   $keys
+     * @param array<int, string> $keys
      */
     private function carriesAdditionalData(array $data, array $keys): bool
     {
@@ -194,18 +206,15 @@ final class AdditionalDataMapper implements DataMapperInterface
         $conditions = [];
         $this->collectConditions($formMetadata->getItems(), null, $conditions);
 
+        $values = null;
         $hidden = [];
         foreach ($conditions as $key => $condition) {
             if (null === $condition || !\in_array($key, $keys, true)) {
                 continue;
             }
 
-            try {
-                if (!$this->expressionLanguage->evaluate($condition, $data)) {
-                    $hidden[$key] = true;
-                }
-            } catch (\Throwable) {
-                // Unparseable/unsupported condition: keep the field visible.
+            if (false === $this->isVisible($condition, $values ??= $this->toExpressionValues($data))) {
+                $hidden[$key] = true;
             }
         }
 
@@ -213,10 +222,77 @@ final class AdditionalDataMapper implements DataMapperInterface
     }
 
     /**
+     * Evaluates a visibleCondition written for the admin, which uses jexl, with Symfony's
+     * ExpressionLanguage. The common jexl constructs are bridged: the `|length` transform
+     * becomes a `length()` call, and dotted paths into nested data (`settings.layout`) work
+     * because associative arrays are handed over as objects.
+     *
+     * Returns null when the condition cannot be evaluated — unsupported syntax, or a variable
+     * the submitted data does not carry (e.g. `__webspace`, `__parent`, which only the admin
+     * knows). The caller then keeps the field visible, so data is never dropped on a guess.
+     *
+     * @param array<string, mixed> $values
+     */
+    private function isVisible(string $condition, array $values): ?bool
+    {
+        $expression = \preg_replace(self::JEXL_LENGTH_TRANSFORM, 'length($1)', $condition) ?? $condition;
+
+        try {
+            return (bool) $this->expressionLanguage->evaluate($expression, $values);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Associative arrays become objects (so `a.b` resolves), lists stay arrays (so `in` and
+     * `length()` keep working on them).
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    private function toExpressionValues(array $data): array
+    {
+        $values = [];
+        foreach ($data as $key => $value) {
+            $values[$key] = self::toExpressionValue($value);
+        }
+
+        return $values;
+    }
+
+    private static function toExpressionValue(mixed $value): mixed
+    {
+        if (!\is_array($value)) {
+            return $value;
+        }
+
+        $converted = \array_map(self::toExpressionValue(...), $value);
+
+        return \array_is_list($converted) ? $converted : (object) $converted;
+    }
+
+    /**
+     * jexl's `length`: number of list items, object properties or string characters.
+     *
+     * @internal called from compiled expressions
+     */
+    public static function length(mixed $value): int
+    {
+        return match (true) {
+            \is_array($value) => \count($value),
+            \is_object($value) => \count(\get_object_vars($value)),
+            \is_string($value) => \mb_strlen($value),
+            default => 0,
+        };
+    }
+
+    /**
      * Walk the form items and collect, per field, the combined visibleCondition of the
      * field and its enclosing section(s). Null means the field is always visible.
      *
-     * @param array<int, object>         $items
+     * @param array<ItemMetadata> $items
      * @param array<string, string|null> $conditions
      */
     private function collectConditions(array $items, ?string $parentCondition, array &$conditions): void

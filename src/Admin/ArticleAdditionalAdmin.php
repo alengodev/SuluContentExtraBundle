@@ -9,11 +9,13 @@ use Sulu\Article\Infrastructure\Sulu\Admin\ArticleAdmin;
 use Sulu\Bundle\AdminBundle\Admin\View\ViewBuilderFactoryInterface;
 use Sulu\Bundle\AdminBundle\Admin\View\ViewCollection;
 use Sulu\Bundle\AdminBundle\Metadata\GroupProviderInterface;
+use Sulu\Content\Infrastructure\Sulu\Admin\ContentViewBuilderFactoryInterface;
 
 class ArticleAdditionalAdmin extends AbstractAdditionalAdmin
 {
     public function __construct(
         private readonly ViewBuilderFactoryInterface $viewBuilderFactory,
+        private readonly ContentViewBuilderFactoryInterface $contentViewBuilderFactory,
         private readonly GroupProviderInterface $groupProvider,
         private readonly string $formKey,
         private readonly string $tabTitle,
@@ -36,7 +38,7 @@ class ArticleAdditionalAdmin extends AbstractAdditionalAdmin
                     ->setFormKey($this->formKey)
                     ->setTabTitle($this->tabTitle)
                     ->setTitleVisible(true)
-                    ->addToolbarActions([self::createSaveToolbarAction(), self::createEditToolbarAction()])
+                    ->addToolbarActions(self::createToolbarActions($this->contentViewBuilderFactory, ArticleInterface::class))
                     ->setPreviewCondition('availableLocales && locale in availableLocales')
                     ->setTabOrder(45)
                     ->setParent($parentView),

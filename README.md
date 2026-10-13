@@ -8,14 +8,17 @@ Extends [Sulu CMS](https://sulu.io/) 3.x Pages, Articles and Snippets with confi
 - **Built-in entities** — concrete `Page`, `PageDimensionContent`, `Article`, `ArticleDimensionContent`, `Snippet`, `SnippetDimensionContent` extending Sulu's base classes; no project entities required
 - **Configurable field mapping** — declare which form fields go to the unlocalized vs. localized dimension content via bundle config
 - **Zero-config entity registration** — `sulu_page` / `sulu_article` / `sulu_snippet` objects are auto-configured via `PrependExtensionInterface`
-- **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
+- **Review workflow aware** — on Sulu 3.1 the Additional Data tab carries the same review toolbar as the core tabs (request for publish, approval overlay, locked while a request is open); on 3.0.x the previous save/publish toolbar
+- **Review pre-validator** — `additional_data_required` blocks review requests and publishing while configured fields are empty (Sulu 3.1)
+- **Fails loud on misconfiguration** — a key listed as both localized and unlocalized, or an `entity_class` without `AdditionalDataInterface`, stops the container build
+- **Navigation link markers** — `NavigationLinkEnhancer` adds `sourceLink`/`sourceLinkResolved`/`sourceUuid` markers to link-type pages; `NavigationLinkTypeResolver` exposes them to templates
 - **Sortable template groups** — `SortedGroupProvider` decorates `sulu_admin.metadata_group_provider` and orders form groups (Article admin tabs, SmartContent Type filter, ...) by the appearance order of their `sulu_admin.template_group.*` keys in `translations/admin+intl-icu.{locale}.yaml`
 
 ## Requirements
 
 - PHP 8.2+
-- Sulu CMS ^3.0.6 (Doctrine/Gedmo compatibility fixes for mapped-superclass entities are bundled with Sulu since 3.0.6 — see [sulu/sulu#8743](https://github.com/sulu/sulu/pull/8743))
-- Symfony 7.x
+- Sulu CMS ^3.0.8, including 3.1 (3.0.8 fixes several security advisories) (Doctrine/Gedmo compatibility fixes for mapped-superclass entities are bundled with Sulu since 3.0.6 — see [sulu/sulu#8743](https://github.com/sulu/sulu/pull/8743))
+- Symfony 6.4, 7.x or 8.x (whichever your Sulu version supports)
 
 ## Installation
 
@@ -145,6 +148,67 @@ Example form:
 </form>
 ```
 
+## Conditional fields (`visibleCondition`)
+
+Fields of the additional data form may carry a `visibleCondition`, e.g. to show a field only for some templates.
+When the content is saved, the data mapper evaluates these conditions against the submitted data and does not
+store keys whose field is hidden — so switching a page to a template without that field does not keep stale
+values. Conditions of enclosing sections apply to their fields.
+
+The admin evaluates conditions with [jexl](https://github.com/TomFrost/Jexl), the bundle with Symfony's
+ExpressionLanguage, bridging the common jexl constructs:
+
+| Works | Example |
+|---|---|
+| Comparisons, `&&`, `\|\|`, `!`, `in` | `template == "special" && !hideTeaser` |
+| The `length` transform | `blocks\|length > 1` |
+| Dotted paths into nested data | `ext.excerpt.title == ""` |
+
+**Known limitation:** conditions that still cannot be evaluated — other jexl transforms, or variables the
+submitted data does not carry, such as the admin-only `__webspace` and `__parent` — are treated as *visible*,
+so their field is stored as if no condition existed. The bundle never drops a value it cannot reason about;
+it may only keep one the admin hides.
+
+## Review workflow (Sulu 3.1)
+
+On Sulu 3.1 the Additional Data tab carries the core review toolbar, so editors request a review or publish
+from it like from any other tab, and it is locked while a request is open.
+
+The bundle also adds the pre-validator `additional_data_required`, the counterpart of Sulu's `seo_required`
+and `excerpt_required`. It refuses "request for review" and "publish" while one of the listed fields is empty:
+
+```yaml
+# config/packages/sulu_content.yaml
+sulu_content:
+    request_workflows:
+        default:
+            pre_validators:
+                additional_data_required: { fields: [template_theme, notes] }
+```
+
+Unlocalized and localized keys can be mixed. A field counts as missing when it is null, an empty or
+whitespace-only string or an empty array; `false` and `0` are values. The editor sees the field names in the
+message "Additional data fields are still missing: …".
+
+## Translations
+
+The bundle ships admin translations (de, en, it) for the default tab title `sulu_admin.app.additional_data`
+and the pre-validator messages. Override any of them in the project's `translations/`.
+
+## Additional data in smart content
+
+Smart content items can pick single additional data fields through the `properties` param of their
+`smart_content` property:
+
+```xml
+<param name="properties" type="collection">
+    <param name="theme" value="additionalData.template_theme"/>
+</param>
+```
+
+The item then carries the value as `item.theme`. Each item gets exactly the fields its own `properties` request,
+also when the same page or article appears in several smart contents with different mappings.
+
 ## Provided Models
 
 | Class | Purpose |
@@ -163,7 +227,8 @@ Example form:
 
 | Field | Type | Description |
 |---|---|---|
-| `sourceLink` | `bool` | `true` when the page redirects to another page or URL |
+| `sourceLink` | `bool` | `true` when the page is a link page (redirects to another page or URL) |
+| `sourceLinkResolved` | `bool` | `true` when the link target could be resolved, `false` when it is gone (deleted page, missing translation, unknown media, ...) |
 | `sourceUuid` | `string` | UUID of the original link-type page |
 
 `NavigationLinkTypeResolver` exposes these fields to templates via the `navlink` content section — bypassing Sulu's `TemplateResolver` which would otherwise drop unknown keys.
@@ -186,3 +251,14 @@ when@prod:
 ```
 
 Proxies are generated during `cache:warmup` as part of the normal deploy process.
+
+## Development
+
+```bash
+composer update --with sulu/sulu:3.1.x-dev   # until Sulu 3.1 is released
+composer lint                                 # PHP-CS-Fixer, Rector, PHPStan (level max), PHPUnit
+composer fix                                  # apply Rector and PHP-CS-Fixer
+```
+
+CI (`.github/workflows/ci.yml`) runs the tests against Sulu 3.0.8 with the lowest dependencies, the newest
+3.0.x and 3.1, and the full lint against 3.1.

@@ -13,6 +13,7 @@ use Alengo\SuluContentExtraBundle\Entity\SnippetDimensionContent;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 class Configuration implements ConfigurationInterface
 {
@@ -44,8 +45,7 @@ class Configuration implements ConfigurationInterface
                     SnippetDimensionContent::class,
                     'snippet_additional_data',
                 ))
-            ->end()
-        ;
+            ->end();
 
         return $treeBuilder;
     }
@@ -82,8 +82,39 @@ class Configuration implements ConfigurationInterface
                     ->scalarPrototype()->end()
                 ->end()
             ->end()
-        ;
+            ->validate()
+                // The merger lays the localized data over the unlocalized one, so a key in both
+                // lists would silently lose its unlocalized value.
+                ->ifTrue(static fn (mixed $config): bool => [] !== self::duplicateKeys($config))
+                ->then(static function (mixed $config) use ($name): never {
+                    throw new InvalidConfigurationException(\sprintf(
+                        'The keys "%s" of "alengo_content_extra.%s" are listed in both "unlocalized_keys" and "localized_keys". A key is stored either unlocalized or localized.',
+                        \implode('", "', self::duplicateKeys($config)),
+                        $name,
+                    ));
+                })
+            ->end();
 
         return $node;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function duplicateKeys(mixed $config): array
+    {
+        if (!\is_array($config)
+            || !\is_array($config['unlocalized_keys'] ?? null)
+            || !\is_array($config['localized_keys'] ?? null)
+        ) {
+            return [];
+        }
+
+        $unlocalized = \array_filter($config['unlocalized_keys'], \is_string(...));
+        $localized = \array_filter($config['localized_keys'], \is_string(...));
+
+        $duplicates = \array_intersect($unlocalized, $localized);
+
+        return \array_values(\array_unique($duplicates));
     }
 }
