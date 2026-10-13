@@ -69,6 +69,23 @@ class AlengoContentExtraExtension extends Extension implements PrependExtensionI
         // association mappings with the configured concrete classes. This ensures Doctrine never
         // generates proxies for the original Sulu classes, allowing auto_generate_proxy_classes: false.
         if ($container->hasExtension('doctrine')) {
+            // Map the bundle entities explicitly instead of relying on the project's
+            // `auto_mapping: true` (DoctrineBundle 3 defaults to false). The key is the bundle
+            // name, which auto_mapping skips when it is set, so they are never mapped twice.
+            $container->prependExtensionConfig('doctrine', [
+                'orm' => [
+                    'mappings' => [
+                        'AlengoContentExtraBundle' => [
+                            'type' => 'attribute',
+                            'is_bundle' => false,
+                            'dir' => __DIR__ . '/../Entity',
+                            'prefix' => 'Alengo\\SuluContentExtraBundle\\Entity',
+                            'alias' => 'AlengoContentExtra',
+                        ],
+                    ],
+                ],
+            ]);
+
             $resolveTargetEntities = [];
             if ($page->enabled && $container->hasExtension('sulu_page')) {
                 $resolveTargetEntities[PageDimensionContent::class] = $page->entityClass;

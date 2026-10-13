@@ -7,3 +7,6 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        - tests/Application/var
+        - tests/Application/config/reference.php

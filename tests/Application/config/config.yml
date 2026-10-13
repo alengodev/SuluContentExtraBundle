@@ -1,0 +1,28 @@
+framework:
+    profiler: { enabled: false }
+
+doctrine:
+    orm:
+        mappings:
+            gedmo_tree:
+                type: xml
+                prefix: Gedmo\Tree\Entity
+                dir: "%gedmo_directory%/Tree/Entity"
+                alias: GedmoTree
+                is_bundle: false
+
+sulu_admin:
+    forms:
+        directories:
+            - '%kernel.project_dir%/config/forms'
+
+alengo_content_extra:
+    page:
+        unlocalized_keys: [theme]
+        localized_keys: [notes]
+    article:
+        unlocalized_keys: [theme]
+        localized_keys: [notes]
+    snippet:
+        unlocalized_keys: [theme]
+        localized_keys: [notes]

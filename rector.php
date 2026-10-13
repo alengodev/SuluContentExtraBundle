@@ -9,6 +9,7 @@ return RectorConfig::configure()
         __DIR__ . '/src',
         __DIR__ . '/tests',
     ])
+    ->withSkip([__DIR__ . '/tests/Application/var', __DIR__ . '/tests/Application/config/reference.php'])
     ->withRootFiles()
     ->withPHPStanConfigs([__DIR__ . '/phpstan.dist.neon'])
     ->withImportNames(importShortClasses: false)

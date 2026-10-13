@@ -1,0 +1,7 @@
+# Loaded on Sulu 3.1+ only, see Kernel::registerContainerConfiguration().
+sulu_content:
+    request_workflows:
+        default:
+            pre_validators:
+                additional_data_required:
+                    fields: [theme, notes]

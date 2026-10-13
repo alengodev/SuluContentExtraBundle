@@ -32,6 +32,10 @@ Register the bundle in `config/bundles.php`:
 Alengo\SuluContentExtraBundle\AlengoContentExtraBundle::class => ['all' => true],
 ```
 
+The bundle registers the Doctrine mapping of its entities itself, so it works with and without
+`doctrine.orm.auto_mapping` (DoctrineBundle 3 defaults to `false`). It assumes the single default entity manager
+configured through `doctrine.orm`.
+
 That's it — no further configuration required for a standard setup.
 
 ## Configuration
@@ -257,8 +261,10 @@ Proxies are generated during `cache:warmup` as part of the normal deploy process
 ```bash
 composer update --with sulu/sulu:3.1.x-dev   # until Sulu 3.1 is released
 composer lint                                 # PHP-CS-Fixer, Rector, PHPStan (level max), PHPUnit
+composer test -- --testsuite functional       # boots tests/Application, a minimal Sulu app with the bundle
 composer fix                                  # apply Rector and PHP-CS-Fixer
 ```
 
-CI (`.github/workflows/ci.yml`) runs the tests against Sulu 3.0.8 with the lowest dependencies, the newest
-3.0.x and 3.1, and the full lint against 3.1.
+CI (`.github/workflows/ci.yml`) runs the unit and functional tests against Sulu 3.0.8 with the lowest
+dependencies (Symfony 6.4), the newest 3.0.x (Symfony 7.4) and 3.1 (Symfony 8), and the full lint against 3.1.
+The functional tests boot the admin and website kernel without a database.

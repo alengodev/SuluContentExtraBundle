@@ -1,0 +1,7 @@
+sulu_admin:
+    resource: "@SuluAdminBundle/Resources/config/routing.yaml"
+    prefix: /admin
+
+sulu_admin_api:
+    resource: "@SuluAdminBundle/Resources/config/routing_api.yaml"
+    prefix: /admin/api

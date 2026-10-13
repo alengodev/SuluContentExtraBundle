@@ -11,6 +11,9 @@
         <testsuite name="unit">
             <directory>tests/Unit</directory>
         </testsuite>
+        <testsuite name="functional">
+            <directory>tests/Functional</directory>
+        </testsuite>
     </testsuites>
     <!-- Only deprecations triggered by the bundle itself fail the run, not those inside vendor code. -->
     <source ignoreIndirectDeprecations="true">

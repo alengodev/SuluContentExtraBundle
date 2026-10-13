@@ -13,6 +13,8 @@
 - The container build fails on a key listed both as localized and unlocalized, and on an
   `entity_class` that does not implement `AdditionalDataInterface`.
 - Tests, PHPStan (level max), PHP-CS-Fixer, Rector and GitHub Actions CI.
+- Functional tests booting a minimal Sulu application (admin and website) on every CI combination,
+  covering Symfony 6.4, 7.4 and 8.
 
 ### Fixed
 
@@ -23,10 +25,14 @@
 - Smart content: a resource referenced by two smart contents with different `properties` gets the fields
   of each, no longer a mix of both.
 - `resolve_target_entities` for pages is only registered when `sulu_page` is installed.
+- The bundle entities are mapped by the bundle itself; they were silently unmapped in applications
+  without `doctrine.orm.auto_mapping: true`.
 
 ### Changed
 
 - Requires Sulu ^3.0.8, which fixes several security advisories of earlier 3.0 releases.
+- Declares the directly used packages (Doctrine ORM/DBAL, Symfony Config, DependencyInjection,
+  HttpKernel, Translation, Service Contracts) instead of relying on Sulu to pull them in.
 
 ## 1.6.7 and earlier
 

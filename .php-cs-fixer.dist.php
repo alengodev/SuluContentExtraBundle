@@ -8,6 +8,8 @@ use PhpCsFixer\Finder;
 // Same rules as the projects using this bundle.
 $finder = (new Finder())
     ->in([__DIR__ . '/src', __DIR__ . '/tests'])
+    ->exclude('Application/var')
+    ->notPath('Application/config/reference.php')
     ->append([__FILE__, __DIR__ . '/rector.php']);
 
 return (new Config())
